@@ -1,6 +1,7 @@
 package com.mygdx.game;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -9,6 +10,7 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
+import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
@@ -94,8 +96,8 @@ public class MyGdxGame implements ApplicationListener {
 		coord_instance[2] = new ModelInstance(coord_model[2]);
 
 		box_model = builder.createBox(1f, 1f, 1f,
-				new Material(ColorAttribute.createDiffuse(new Color(0.0f, 0.0f, 1.0f, 0.3f))),
-				//new Material(new BlendingAttribute(0.3f)),
+				//new Material(ColorAttribute.createDiffuse(new Color(0.0f, 0.0f, 1.0f, 0.3f))),
+				new Material(new BlendingAttribute(0.3f)),
 				Usage.Position | Usage.Normal);
 		boxes_instance = new ModelInstance[100];
 		for (int i = 0; i < 100; i++)
@@ -138,17 +140,11 @@ public class MyGdxGame implements ApplicationListener {
 		if (!vc.retrieve(webcam))
 			System.out.print("unable to retrieve capture\n");
 		Mat gray = new Mat(webcam.rows(), webcam.cols(), CvType.CV_8UC1);
-		for (int i = 0; i < webcam.rows(); i++)
-			for (int j = 0; j < webcam.cols(); j++)
-			{
-				double[] data = webcam.get(i, j);
-				gray.put(i, j, new byte[]{
-						(byte) (255.0 * (data[0] + data[1] + data[2]) / 3.0)
-				});
-			}
+		Mat binary = new Mat(webcam.rows(), webcam.cols(), CvType.CV_8UC1);
 		Mat undist_webcam = new Mat();
 		if (!calib.isCalibrated())
 		{
+			Imgproc.cvtColor(webcam, gray, Imgproc.COLOR_BGR2GRAY);
 			calib.processFrame(gray, webcam);
 			if (Math.random() < 0.5)
 				calib.addCorners();
@@ -161,12 +157,69 @@ public class MyGdxGame implements ApplicationListener {
 		}
 		else
 			Imgproc.undistort(webcam, undist_webcam, calib.getCameraMatrix(), calib.getDistortionCoefficients());
-		
+
+		Imgproc.cvtColor(undist_webcam, gray, Imgproc.COLOR_BGR2GRAY);
+		//Imgproc.threshold(gray, binary, 80, 220, Imgproc.THRESH_BINARY);
+		Imgproc.adaptiveThreshold(gray, binary, 255,
+				Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 101, 30);
+		//UtilAR.imShow("gray", gray);
+		//UtilAR.imShow("binary", binary);
 		/*
 		Mat canny = new Mat();
 		Imgproc.Canny(webcam, canny, 80, 220);
 		UtilAR.imShow("canny", canny);
 		*/
+		
+		Mat intrinsics;
+		MatOfDouble distortion;
+		//intrinsics = UtilAR.getDefaultIntrinsicMatrix(webcam.rows(), webcam.cols());
+		//distortion = UtilAR.getDefaultDistortionCoefficients();
+		intrinsics = calib.getCameraMatrix();
+		distortion = new MatOfDouble(calib.getDistortionCoefficients());
+		
+		ArrayList<ModelInstance> boxes_list = new ArrayList<ModelInstance>();
+		if (calib.isCalibrated()) //contours
+		{
+			List<MatOfPoint> contours_3 = new ArrayList<MatOfPoint>();
+			Imgproc.findContours(binary, contours_3, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_NONE);
+			//Imgproc.drawContours(undist_webcam, contours_3, -1, new Scalar(0, 0, 255));
+			
+			List<MatOfPoint2f> contours = new ArrayList<MatOfPoint2f>();
+			List<MatOfPoint> approx_curves = new ArrayList<MatOfPoint>();
+			List<MatOfPoint2f> approx_curves2f = new ArrayList<MatOfPoint2f>();
+			for (MatOfPoint c : contours_3)
+				contours.add(new MatOfPoint2f(c.toArray()));
+			for (MatOfPoint2f curve : contours)
+			{
+				MatOfPoint2f approxCurve = new MatOfPoint2f();
+				Imgproc.approxPolyDP(curve, approxCurve, 10, true);
+				if (approxCurve.rows() == 4 &&
+						isCCConvexPolygon(approxCurve))
+				{
+					approx_curves.add(new MatOfPoint(approxCurve.toArray()));
+					approx_curves2f.add(approxCurve);
+				}
+			}
+			Imgproc.drawContours(undist_webcam, approx_curves, -1, new Scalar(0, 255, 0));
+			for (MatOfPoint2f c : approx_curves2f)
+			{
+				MatOfPoint3f object_corners = new MatOfPoint3f(new Point3[]
+						{
+						new Point3(0, 0, 0),
+						new Point3(1, 0, 0),
+						new Point3(1, 1, 0),
+						new Point3(0, 1, 0)
+						});
+				Matrix4 transform = correctSolvePnP(object_corners, c,
+						intrinsics, distortion, cam.fieldOfView, webcam.rows());
+				Matrix4 ttransl = new Matrix4();
+				ttransl.translate(0.5f, 0.5f, -0.5f);
+				boxes_list.add(new ModelInstance(coord_model[0], transform));
+				boxes_list.add(new ModelInstance(coord_model[1], transform));
+				boxes_list.add(new ModelInstance(coord_model[2], transform));
+				boxes_list.add(new ModelInstance(box_model, ttransl.mul(transform)));
+			}
+		}
 		
 		MatOfPoint2f corners = new MatOfPoint2f();
 		Size size = new Size(9, 6);
@@ -183,43 +236,14 @@ public class MyGdxGame implements ApplicationListener {
 				//Calib3d.drawChessboardCorners(webcam, size, corners, corners_found);
 				Point[] corners_array = corners.toArray();
 		
-				Mat intrinsics;
-				MatOfDouble distortion;
-				//intrinsics = UtilAR.getDefaultIntrinsicMatrix(webcam.rows(), webcam.cols());
-				//distortion = UtilAR.getDefaultDistortionCoefficients();
-				intrinsics = calib.getCameraMatrix();
-				distortion = new MatOfDouble(calib.getDistortionCoefficients());
-				Mat rotation = new Mat(), translation = new Mat();
 				Point3[] object_corners_array = new Point3[(int) (size.height * size.width)];
 				for (int i = 0; i < size.height; i++)
 					for (int j = 0; j < size.width; j++)
 						object_corners_array[(int) (i * size.width + j)] = new Point3(j, i, 0f);
 				MatOfPoint3f object_corners = new MatOfPoint3f(object_corners_array);
 				
-				Calib3d.solvePnP(object_corners, corners, intrinsics, distortion,
-						rotation, translation);
-						//false, Calib3d.CV_EPNP);
-				
-				Matrix4 transform = toMatrix4(rotation, translation);
-				
-				int C0 = 0, C1 = object_corners_array.length - 1;
-				Point3 P0 = transform(transform, object_corners_array[C0]),
-						P1 = transform(transform, object_corners_array[C1]); //3d points using PnP
-				Point p0 = new Point(P0.x / P0.z, P0.y / P0.z),
-						p1 = new Point(P1.x / P1.z, P1.y / P1.z); //projection on screen of P0, P1
-				Point d_corners = new Point(corners_array[C0].x - corners_array[C1].x,
-						corners_array[C0].y - corners_array[C1].y);
-				Point dp = new Point(p0.x - p1.x, p0.y - p1.y);
-				double alpha = cam.fieldOfView / 180.0 * Math.PI *
-						Math.sqrt(d_corners.x * d_corners.x + d_corners.y * d_corners.y) / webcam.rows();
-				double beta = Math.sqrt(dp.x * dp.x + dp.y * dp.y);
-				double z_scale = beta / alpha;
-				if (m_z_scale < 0)
-					m_z_scale = z_scale;
-				System.out.print("z_scale = " + z_scale + "\n");
-				
-				translation.put(2, 0, z_scale * translation.get(2, 0)[0]);
-				transform = toMatrix4(rotation, translation);
+				Matrix4 transform = correctSolvePnP(object_corners, corners,
+						intrinsics, distortion, cam.fieldOfView, webcam.rows());
 				
 				cam.up.set(0, -1, 0);
 				cam.position.set(0f, 0f, 0f);
@@ -229,7 +253,7 @@ public class MyGdxGame implements ApplicationListener {
 				
 				//translation.put(2, 0, 0.06 * translation.get(2, 0)[0]);
 				//UtilAR.setCameraByRT(rotation, translation, cam);
-				cam.transform(transform.inv());
+				//cam.transform(transform.inv());
 				
 				instance = new ModelInstance(model);
 				for (int i = 0; i < 3; i++)
@@ -239,7 +263,7 @@ public class MyGdxGame implements ApplicationListener {
 				{
 					Matrix4 ttransl = new Matrix4();
 					ttransl.translate((float) object_corners_array[i].x - 0.5f, (float) object_corners_array[i].y - 0.5f, (float) object_corners_array[i].z - 0.5f);
-					boxes_instance[i] = new ModelInstance(box_model, ttransl);
+					boxes_instance[i] = new ModelInstance(box_model, ttransl.mulLeft(transform));
 				}
 				
 			}
@@ -259,11 +283,14 @@ public class MyGdxGame implements ApplicationListener {
 		{
 	        model_batch.begin(cam);
 	        //model_batch.render(instance, environment);
-	        
+	        /*
 	        for (int i = 0; i < size.width * size.height; i++)
 	        	if (i % 2 == 0)
 	        		model_batch.render(boxes_instance[i], environment);
-	        		
+	        		*/
+	        for (ModelInstance m : boxes_list)
+	        	model_batch.render(m, environment);
+	        
 	        model_batch.end();
 		}
 	}
@@ -317,5 +344,56 @@ public class MyGdxGame implements ApplicationListener {
 		float[] q = new float[] {(float) p.x, (float) p.y, (float) p.z};
 		Matrix4.mulVec(t.getValues(), q);
 		return new Point3(q[0], q[1], q[2]);
+	}
+	
+	double scaleZ(Matrix4 transform, Point3 objc0, Point3 objc1, Point c0, Point c1, double fov, double webcam_rows) {
+		Point3 P0 = transform(transform, objc0),
+				P1 = transform(transform, objc1); //3d points using PnP
+		Point p0 = new Point(P0.x / P0.z, P0.y / P0.z),
+				p1 = new Point(P1.x / P1.z, P1.y / P1.z); //projection on screen of P0, P1
+		Point d_corners = new Point(c0.x - c1.x, c0.y - c1.y);
+		Point dp = new Point(p0.x - p1.x, p0.y - p1.y);
+		double alpha = fov / 180.0 * Math.PI *
+				Math.sqrt(d_corners.x * d_corners.x + d_corners.y * d_corners.y) / webcam_rows;
+		double beta = Math.sqrt(dp.x * dp.x + dp.y * dp.y);
+		double z_scale = beta / alpha;
+		return z_scale;
+	}
+	
+	Matrix4 correctSolvePnP(MatOfPoint3f object_corners, MatOfPoint2f corners,
+			Mat intrinsics, MatOfDouble distortion, double fov, double height) {
+		Mat rotation = new Mat(), translation = new Mat();
+		Calib3d.solvePnP(object_corners, corners, intrinsics, distortion,
+				rotation, translation);
+				//false, Calib3d.CV_EPNP);
+		
+		Matrix4 transform = toMatrix4(rotation, translation);
+		Point3[] object_corners_array = object_corners.toArray();
+		Point[] corners_array = corners.toArray();
+		int C0 = 0, C1 = object_corners_array.length - 1;
+		double z_scale = scaleZ(transform, object_corners_array[C0], object_corners_array[C1],
+				corners_array[C0], corners_array[C1], fov, height);
+		if (m_z_scale < 0)
+			m_z_scale = z_scale;
+		System.out.print("z_scale = " + z_scale + "\n");
+		translation.put(2, 0, z_scale * translation.get(2, 0)[0]);
+		transform = toMatrix4(rotation, translation);
+		return transform;
+	}
+	
+	boolean isCCConvexPolygon(MatOfPoint2f p) {
+		Point[] v = p.toArray();
+		int n = v.length;
+		int cnt = 0;
+		for (int i = 0; i < n; i++)
+		{
+			Point n1 = v[(i + 1) % n];
+			Point n2 = v[(i + 2) % n];
+			Point d1 = new Point(n1.x - v[i].x, n1.y - v[i].y);
+			Point d2 = new Point(n2.x - n1.x, n2.y - n1.y);
+			if (d1.x * d2.y - d1.y * d2.x > 0)
+				cnt++;
+		}
+		return cnt == n;
 	}
 }
