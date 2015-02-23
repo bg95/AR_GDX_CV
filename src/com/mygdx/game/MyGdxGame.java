@@ -1,5 +1,7 @@
 package com.mygdx.game;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
@@ -55,18 +57,21 @@ public class MyGdxGame implements ApplicationListener {
 	public ModelInstance[] boxes_instance;
 	public Environment environment;
 	
+	final File calib_file = new File("camera.dat");
+	
 	Timer timer;
 	VideoCapture vc;
 	CameraCalibrator calib;
-	double m_z_scale;
+	//double m_z_scale = -1.0;
 	
 	@Override
 	public void create () {
 		cam = new PerspectiveCamera(/*67*/40f, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-		cam.position.set(0f, 0f, 4f);
-		cam.lookAt(0, 0, 0);
+		cam.up.set(0, -1, 0);
+		cam.position.set(0f, 0f, 0f);
+		cam.lookAt(0, 0, 1);
 		cam.near = 0.1f;
-		cam.far = 20f;
+		cam.far = 2000f;
 		cam.update();
 		//cam_control = new CameraInputController(cam);
 		Gdx.input.setInputProcessor(cam_control);
@@ -128,7 +133,8 @@ public class MyGdxGame implements ApplicationListener {
 			System.out.print("unable to grab capture\n");
 		if (!vc.retrieve(webcam))
 			System.out.print("unable to retrieve capture\n");
-		calib = new CameraCalibrator(webcam.cols(), webcam.rows());		
+		calib = new CameraCalibrator(webcam.cols(), webcam.rows());
+		calib.load(calib_file);
 	}
 
 	@Override
@@ -148,10 +154,18 @@ public class MyGdxGame implements ApplicationListener {
 			calib.processFrame(gray, webcam);
 			if (Math.random() < 0.5)
 				calib.addCorners();
-			if (calib.getCornersBufferSize() >= 10)
+			if (calib.getCornersBufferSize() >= 20)
 			{
 				calib.calibrate();
-				m_z_scale = -1;
+				try {
+					calib.save(calib_file);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					System.out.print("Saving camera info failed\n");
+				}
+				calib = new CameraCalibrator(webcam.cols(), webcam.rows());
+				calib.load(calib_file);
 			}
 			undist_webcam = webcam;
 		}
@@ -214,10 +228,10 @@ public class MyGdxGame implements ApplicationListener {
 						intrinsics, distortion, cam.fieldOfView, webcam.rows());
 				Matrix4 ttransl = new Matrix4();
 				ttransl.translate(0.5f, 0.5f, -0.5f);
-				boxes_list.add(new ModelInstance(coord_model[0], transform));
-				boxes_list.add(new ModelInstance(coord_model[1], transform));
-				boxes_list.add(new ModelInstance(coord_model[2], transform));
-				boxes_list.add(new ModelInstance(box_model, ttransl.mul(transform)));
+				boxes_list.add(new ModelInstance(coord_model[0], transform.cpy()));
+				boxes_list.add(new ModelInstance(coord_model[1], transform.cpy()));
+				boxes_list.add(new ModelInstance(coord_model[2], transform.cpy()));
+				boxes_list.add(new ModelInstance(box_model, ttransl.mulLeft(transform.cpy())));
 			}
 		}
 		
@@ -245,11 +259,6 @@ public class MyGdxGame implements ApplicationListener {
 				Matrix4 transform = correctSolvePnP(object_corners, corners,
 						intrinsics, distortion, cam.fieldOfView, webcam.rows());
 				
-				cam.up.set(0, -1, 0);
-				cam.position.set(0f, 0f, 0f);
-				cam.lookAt(0, 0, 1);
-				cam.near = 0.1f;
-				cam.far = 2000f;
 				
 				//translation.put(2, 0, 0.06 * translation.get(2, 0)[0]);
 				//UtilAR.setCameraByRT(rotation, translation, cam);
@@ -333,7 +342,7 @@ public class MyGdxGame implements ApplicationListener {
 		//transform_float[12] = transform_float[13] = transform_float[14] = 0;
 		transform_float[12] = (float) translation.get(0, 0)[0]; 
 		transform_float[13] = (float) translation.get(1, 0)[0]; 
-		transform_float[14] = (float) (translation.get(2, 0)[0] * m_z_scale); 
+		transform_float[14] = (float) (translation.get(2, 0)[0] /* m_z_scale*/); 
 		transform_float[15] = 1;
 		Matrix4 transform = new Matrix4(), tr_rotation = new Matrix4(transform_float);
 		transform = transform.mul(tr_rotation);
@@ -356,6 +365,7 @@ public class MyGdxGame implements ApplicationListener {
 		double alpha = fov / 180.0 * Math.PI *
 				Math.sqrt(d_corners.x * d_corners.x + d_corners.y * d_corners.y) / webcam_rows;
 		double beta = Math.sqrt(dp.x * dp.x + dp.y * dp.y);
+		System.out.print("p0=" + p0.x + "," + p0.y + "\n");
 		double z_scale = beta / alpha;
 		return z_scale;
 	}
@@ -373,8 +383,11 @@ public class MyGdxGame implements ApplicationListener {
 		int C0 = 0, C1 = object_corners_array.length - 1;
 		double z_scale = scaleZ(transform, object_corners_array[C0], object_corners_array[C1],
 				corners_array[C0], corners_array[C1], fov, height);
+		/*
 		if (m_z_scale < 0)
 			m_z_scale = z_scale;
+		System.out.print("m_z_scale = " + m_z_scale + "\n");
+		*/
 		System.out.print("z_scale = " + z_scale + "\n");
 		translation.put(2, 0, z_scale * translation.get(2, 0)[0]);
 		transform = toMatrix4(rotation, translation);

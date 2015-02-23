@@ -1,5 +1,16 @@
 package com.mygdx.game;
 
+import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.StringWriter;
 import java.util.*;
 
 import org.opencv.calib3d.Calib3d;
@@ -161,4 +172,51 @@ public class CameraCalibrator {
     public void setCalibrated() {
         mIsCalibrated = true;
     }
+    
+    public void save(File f) throws IOException {
+    	if (!isCalibrated())
+    		return;
+    	FileOutputStream fos = new FileOutputStream(f);
+    	DataOutputStream dos = new DataOutputStream(fos);
+    	saveDouble1CMat(mCameraMatrix, dos);
+    	saveDouble1CMat(mDistortionCoefficients, dos);
+    }
+    
+    public void load(File f) {
+    	try {
+        	FileInputStream fis = new FileInputStream(f);
+        	DataInputStream dis = new DataInputStream(fis);
+			loadDouble1CMat(dis).copyTo(mCameraMatrix);
+	    	loadDouble1CMat(dis).copyTo(mDistortionCoefficients);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.out.print("Loading camera info failed\n");
+			return;
+		}
+    	setCalibrated();
+    }
+    
+    void saveDouble1CMat(Mat m, DataOutputStream dos) throws IOException {
+    	dos.writeInt(m.rows());
+    	dos.writeInt(m.cols());
+    	for (int i = 0; i < m.rows(); i++)
+    		for (int j = 0; j < m.cols(); j++)
+    		{
+    			dos.writeDouble(m.get(i, j)[0]);
+    		}
+    }
+    
+    Mat loadDouble1CMat(DataInputStream dis) throws IOException {
+    	int r = dis.readInt();
+    	int c = dis.readInt();
+    	Mat m = new Mat(r, c, CvType.CV_64FC1);
+    	for (int i = 0; i < r; i++)
+    		for (int j = 0; j < c; j++)
+    		{
+				m.put(i, j, dis.readDouble());
+    		}
+    	return m;
+    }
+    
 }
