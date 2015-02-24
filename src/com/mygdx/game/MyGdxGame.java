@@ -1,8 +1,10 @@
 package com.mygdx.game;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -72,6 +74,7 @@ public class MyGdxGame implements ApplicationListener {
 	CameraCalibrator calib;
 	//double m_z_scale = -1.0;
 	MatOfPoint2f prev_c = new MatOfPoint2f(new Mat(4, 2, CvType.CV_32FC1));
+	List<MatOfPoint2f> quad_list = new LinkedList<MatOfPoint2f>();
 
 	AssetManager assets = new AssetManager();
 	boolean loading;
@@ -132,7 +135,7 @@ public class MyGdxGame implements ApplicationListener {
 		environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
         environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
-        
+        /*
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask(){
 
@@ -143,7 +146,7 @@ public class MyGdxGame implements ApplicationListener {
 			}
         	
         }, 0, 50);
-        
+        */
         vc = new VideoCapture(0);
         //vc.open(0);
         if (!vc.isOpened())
@@ -191,8 +194,6 @@ public class MyGdxGame implements ApplicationListener {
 					e.printStackTrace();
 					System.out.print("Saving camera info failed\n");
 				}
-				calib = new CameraCalibrator(webcam.cols(), webcam.rows());
-				calib.load(calib_file);
 			}
 			undist_webcam = webcam;
 		}
@@ -213,8 +214,6 @@ public class MyGdxGame implements ApplicationListener {
 		
 		Mat intrinsics;
 		MatOfDouble distortion;
-		//intrinsics = UtilAR.getDefaultIntrinsicMatrix(webcam.rows(), webcam.cols());
-		//distortion = UtilAR.getDefaultDistortionCoefficients();
 		intrinsics = calib.getCameraMatrix();
 		distortion = new MatOfDouble(calib.getDistortionCoefficients());
 		
@@ -242,6 +241,8 @@ public class MyGdxGame implements ApplicationListener {
 				}
 			}
 			Imgproc.drawContours(undist_webcam, approx_curves, -1, new Scalar(0, 255, 0));
+			
+			//matchQuads(quad_list, approx_curves2f, matching);
 			
 			//for (MatOfPoint2f c : approx_curves2f)
 			if (!approx_curves2f.isEmpty())
@@ -278,6 +279,8 @@ public class MyGdxGame implements ApplicationListener {
 					Mat warp = Imgproc.getPerspectiveTransform(c, dst);
 					Imgproc.warpPerspective(undist_webcam, unwarp_webcam, warp, unwarp_webcam.size(), Imgproc.INTER_LINEAR);
 					UtilAR.imShow("unwarp", unwarp_webcam);
+					String code = CodeHelper.decode(unwarp_webcam);
+					System.out.print("QR code: " + code + "\n");
 				}
 			}
 		}

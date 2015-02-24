@@ -1,0 +1,310 @@
+package com.mygdx.game;
+
+import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import org.opencv.calib3d.Calib3d;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfDouble;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.MatOfPoint3f;
+import org.opencv.core.Point;
+import org.opencv.core.Point3;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.core.TermCriteria;
+import org.opencv.highgui.VideoCapture;
+import org.opencv.imgproc.Imgproc;
+
+import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.ApplicationListener;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.PerspectiveCamera;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.VertexAttributes.Usage;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g3d.Environment;
+import com.badlogic.gdx.graphics.g3d.Material;
+import com.badlogic.gdx.graphics.g3d.Model;
+import com.badlogic.gdx.graphics.g3d.ModelBatch;
+import com.badlogic.gdx.graphics.g3d.ModelInstance;
+import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
+import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.math.Matrix4;
+import com.badlogic.gdx.math.Vector3;
+
+public class MyGdxGame implements ApplicationListener {
+	public PerspectiveCamera cam;
+	public CameraInputController cam_control;
+	public ModelBatch model_batch;
+	public Model model;
+	public Model[] coord_model;
+	public ModelInstance instance;
+	public ModelInstance[] coord_instance;
+	public Model box_model;
+	public ModelInstance[] boxes_instance;
+	public Environment environment;
+	
+	Timer timer;
+	VideoCapture vc;
+	
+	@Override
+	public void create () {
+		cam = new PerspectiveCamera(/*67*/40, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+		cam.position.set(0f, 0f, 4f);
+		cam.lookAt(0, 0, 0);
+		cam.near = 0.1f;
+		cam.far = 20f;
+		cam.update();
+		//cam_control = new CameraInputController(cam);
+		Gdx.input.setInputProcessor(cam_control);
+		
+		model_batch = new ModelBatch();
+		ModelBuilder builder = new ModelBuilder();
+		model = builder.createBox(3f, 3f, 3f,
+				new Material(ColorAttribute.createDiffuse(Color.GREEN)),
+				Usage.Position | Usage.Normal);
+		coord_model = new Model[3];
+		coord_model[0] = builder.createArrow(0f, 0f, 0f, 1f, 0f, 0f,
+				0.2f, 0.1f, 15, GL20.GL_TRIANGLES,
+				new Material(ColorAttribute.createDiffuse(Color.RED)),
+				Usage.Position | Usage.Normal);
+		coord_model[1] = builder.createArrow(0f, 0f, 0f, 0f, 1f, 0f,
+				0.2f, 0.1f, 15, GL20.GL_TRIANGLES,
+				new Material(ColorAttribute.createDiffuse(Color.GREEN)),
+				Usage.Position | Usage.Normal);
+		coord_model[2] = builder.createArrow(0f, 0f, 0f, 0f, 0f, 1f,
+				0.2f, 0.1f, 15, GL20.GL_TRIANGLES,
+				new Material(ColorAttribute.createDiffuse(Color.BLUE)),
+				Usage.Position | Usage.Normal);
+		instance = new ModelInstance(model, 1f, 0.5f, 0.75f);
+		coord_instance = new ModelInstance[3];
+		coord_instance[0] = new ModelInstance(coord_model[0]);
+		coord_instance[1] = new ModelInstance(coord_model[1]);
+		coord_instance[2] = new ModelInstance(coord_model[2]);
+
+		box_model = builder.createBox(1f, 1f, 1f,
+				new Material(ColorAttribute.createDiffuse(Color.BLUE)),
+				Usage.Position | Usage.Normal);
+		boxes_instance = new ModelInstance[49];
+		for (int i = 0; i < 49; i++)
+			boxes_instance[i] = new ModelInstance(box_model);
+		
+		environment = new Environment();
+        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
+        environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
+        
+        timer = new Timer();
+        timer.scheduleAtFixedRate(new TimerTask(){
+
+			@Override
+			public void run() {
+		        //cam.rotateAround(new Vector3(0, 0, 0), new Vector3(0, 1, 0), 1f);
+		        cam.update();
+			}
+        	
+        }, 0, 500);
+        
+        vc = new VideoCapture(0);
+        //vc.open(0);
+        if (!vc.isOpened())
+        	System.out.print("unable to open camera\n");
+	}
+
+	@Override
+	public void render () {
+		
+		/*
+		// C r e a t e an OpenCV i d e n t i t y m a t r i x
+		Mat eye = Mat.eye(128, 128, CvType.CV_8UC1);
+		// M u l t i p l y w i t h 255 ( w h i t e )
+		Core.multiply(eye, new Scalar(255), eye);
+		// P a s s m a t r i x t o GDX t h r o u g h u t i l and v i s u a l i z e
+		*/
+		Mat webcam = new Mat();
+		if (!vc.grab())
+			System.out.print("unable to grab capture\n");
+		if (!vc.retrieve(webcam))
+			System.out.print("unable to retrieve capture\n");
+		/*
+		Mat canny = new Mat();
+		Imgproc.Canny(webcam, canny, 80, 220);
+		UtilAR.imShow("canny", canny);
+		*/
+		
+		MatOfPoint2f corners = new MatOfPoint2f();
+		Size size = new Size(7, 7);
+		boolean corners_found = Calib3d.findChessboardCorners(webcam, size, corners, 
+				Calib3d.CALIB_CB_ADAPTIVE_THRESH + Calib3d.CALIB_CB_NORMALIZE_IMAGE + Calib3d.CALIB_CB_FAST_CHECK + Calib3d.CALIB_CB_FILTER_QUADS);
+		if (corners_found)
+		{
+			/*
+            TermCriteria criteria = new TermCriteria(TermCriteria.EPS, 30, 0.1);
+            Mat grey = new Mat(webcam.rows(), webcam.cols(), CvType.CV_8UC1);
+            for (int i = 0; i < webcam.rows(); i++)
+            	for (int j = 0; j < webcam.cols(); j++)
+            		grey.get(i, j)[0] = webcam.get(i, j)[0];
+            Imgproc.cornerSubPix(grey, corners, new Size(11, 11), new Size(-1, -1), criteria);
+            */
+			Calib3d.drawChessboardCorners(webcam, size, corners, corners_found);
+			Point[] corners_array = corners.toArray();
+			/*
+			System.out.print("Chessboard found:\n");
+			for (Point p : corners_array)
+			{
+				System.out.print(p.x);
+				System.out.print(',');
+				System.out.print(p.y);
+				System.out.print('\n');
+			}
+			*/
+			Mat intrinsics;
+			MatOfDouble distortion;
+			intrinsics = UtilAR.getDefaultIntrinsicMatrix(webcam.rows(), webcam.cols());
+			distortion = UtilAR.getDefaultDistortionCoefficients();
+			Mat rotation = new Mat(), translation = new Mat();
+			Point3[] object_corners_array = new Point3[(int) (size.height * size.width)];
+			for (int i = 0; i < size.height; i++)
+				for (int j = 0; j < size.width; j++)
+					object_corners_array[(int) ((i) * size.width + j)] = new Point3(j, i, 0f);
+			MatOfPoint3f object_corners = new MatOfPoint3f(object_corners_array);
+
+			/*
+			Point3[] partial_object_corners_array = new Point3[]
+					{
+						object_corners_array[0],
+						object_corners_array[(int) (size.width - 1)],
+						object_corners_array[(int) ((size.height - 1) * size.width)],
+						object_corners_array[(int) ((size.height - 1) * size.width + (size.width - 1))]
+					};
+			MatOfPoint3f partial_object_corners = new MatOfPoint3f(partial_object_corners_array);
+			Point[] corners_array1 = corners.toArray();
+			Point[] partial_corners_array = new Point[]
+					{
+						corners_array1[0],
+						corners_array1[(int) (size.width - 1)],
+						corners_array1[(int) ((size.height - 1) * size.width)],
+						corners_array1[(int) ((size.height - 1) * size.width + (size.width - 1))]
+					};
+			MatOfPoint2f partial_corners = new MatOfPoint2f(partial_corners_array);
+			*/
+			Calib3d.solvePnP(object_corners, corners, intrinsics, distortion, rotation, translation,
+					false, Calib3d.CV_EPNP);
+			/*
+			System.out.print("rotation translation 3x1:\n");
+			Mat rotation33 = new Mat();
+			Calib3d.Rodrigues(rotation, rotation33);
+			
+			for (Point3 p0 : object_corners_array)
+			{
+				Point3 p = p0.clone();
+				Mat m = new Mat(3, 1, rotation33.type());
+				m.put(0, 0, p.x);m.put(1, 0, p.y);m.put(2, 0, p.z);
+				Core.gemm(rotation33.t(), m, 1, translation, 1, m);
+				//Core.add(m, translation, m);
+				p.x = m.get(0, 0)[0];p.y = m.get(1, 0)[0];p.z = m.get(2, 0)[0];
+				System.out.print(p.x);System.out.print(',');System.out.print(p.y);
+				System.out.print(',');System.out.print(p.z);System.out.print('\n');
+			}
+			
+			float[] transform_float = new float[16];
+			for (int i = 0; i < 3; i++)
+			{
+				int ti = i;
+				for (int j = 0; j < 3; j++)
+				{
+					transform_float[i * 4 + j] = (float) rotation33.get(j, i)[0];
+				}
+				transform_float[i * 4 + 3] = 0;//(float) translation.get(i, 0)[0] / 10f;
+
+			}
+			transform_float[12] = transform_float[13] = transform_float[14] = 0;
+			transform_float[15] = 1;
+			*/
+			Matrix4 transform = new Matrix4(), tr_rotation = new Matrix4();
+			//tr_rotation.set(transform_float);
+			transform = transform.translate((float) translation.get(0, 0)[0],
+					(float) translation.get(1, 0)[0],
+					(float) translation.get(2, 0)[0]);
+			transform = transform.mul(tr_rotation);
+			
+			cam.up.set(0, -1, 0);
+			cam.position.set(0f, 0f, 0f);
+			cam.lookAt(0, 0, 10);
+			cam.near = 0.1f;
+			cam.far = 200f;
+			//cam.transform(transform.inv());
+			
+			UtilAR.setCameraByRT(rotation, translation, cam);
+			
+			transform.idt();
+			
+			instance = new ModelInstance(model, transform);
+			for (int i = 0; i < 3; i++)
+				coord_instance[i] = new ModelInstance(coord_model[i], transform);
+			
+			for (int i = 0; i < object_corners_array.length; i++)
+			{
+				Matrix4 ttransl = new Matrix4();
+				ttransl.translate((float) object_corners_array[i].x - 0.5f, (float) object_corners_array[i].y - 0.5f, (float) object_corners_array[i].z - 0.5f);
+				boxes_instance[i] = new ModelInstance(box_model, ttransl.mulLeft(transform));
+			}
+			
+		}
+		else
+		{
+			System.out.print("No chessboard found.\n");
+		}
+
+		UtilAR.imDrawBackground(webcam);
+		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        //Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+ 
+        //cam_control.update();
+        
+        model_batch.begin(cam);
+        //model_batch.render(instance, environment);
+        /*
+        model_batch.render(coord_instance[0], environment);
+        model_batch.render(coord_instance[1], environment);
+        model_batch.render(coord_instance[2], environment);
+        */
+        for (int i = 0; i < size.width * size.height; i++)
+        	if (i % 2 == 0)
+        		model_batch.render(boxes_instance[i], environment);
+        model_batch.end();
+        
+	}
+
+	@Override
+	public void resize(int width, int height) {
+		cam.viewportWidth = Gdx.graphics.getWidth();
+		cam.viewportHeight = Gdx.graphics.getHeight();
+		cam.update();
+	}
+
+	@Override
+	public void pause() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void resume() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void dispose() {
+		model.dispose();
+		vc.release();
+	}
+}

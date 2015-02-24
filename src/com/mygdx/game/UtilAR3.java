@@ -36,7 +36,7 @@ import com.badlogic.gdx.math.Matrix4;
 /**
  * Version 1.2
  */
-public class UtilAR {
+public class UtilAR3 {
 
 	private static HashMap<String,MatView> panels = new HashMap<String,MatView>(32);
 
