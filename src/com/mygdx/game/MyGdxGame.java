@@ -26,6 +26,8 @@ import org.opencv.imgproc.Imgproc;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.assets.loaders.ModelLoader;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
@@ -40,10 +42,13 @@ import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
+import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.collision.BoundingBox;
 
 public class MyGdxGame implements ApplicationListener {
 	public PerspectiveCamera cam;
@@ -58,11 +63,18 @@ public class MyGdxGame implements ApplicationListener {
 	public Environment environment;
 	
 	final File calib_file = new File("camera.dat");
+	//final String model_filename = "models/more/textures/Miku_1_4.g3db";
+	//final String model_filename = "models/more/EnoshimaJunko/TEX/junko.g3db";
+	final String model_filename = "models/BRS/BRSDigitrevx/BRS.g3db";
 	
 	Timer timer;
 	VideoCapture vc;
 	CameraCalibrator calib;
 	//double m_z_scale = -1.0;
+	MatOfPoint2f prev_c = new MatOfPoint2f(new Mat(4, 2, CvType.CV_32FC1));
+
+	AssetManager assets = new AssetManager();
+	boolean loading;
 	
 	@Override
 	public void create () {
@@ -104,6 +116,15 @@ public class MyGdxGame implements ApplicationListener {
 				//new Material(ColorAttribute.createDiffuse(new Color(0.0f, 0.0f, 1.0f, 0.3f))),
 				new Material(new BlendingAttribute(0.3f)),
 				Usage.Position | Usage.Normal);
+		assets.load(model_filename, Model.class);
+		loading = true;
+		//box_model = assets.get("models/g3d/Miku_1_4.g3db", Model.class);
+		//box_model = loader.loadModel(Gdx.files.internal("models/more/Miku_1_4.obj"));
+		//box_model = loader.loadModel(Gdx.files.internal("models/ship/ship.obj"));
+		//BoundingBox bouding_box = new BoundingBox();
+		//box_model.calculateBoundingBox(bouding_box);
+		
+		
 		boxes_instance = new ModelInstance[100];
 		for (int i = 0; i < 100; i++)
 			boxes_instance[i] = new ModelInstance(box_model);
@@ -139,6 +160,12 @@ public class MyGdxGame implements ApplicationListener {
 
 	@Override
 	public void render () {
+		
+		if (loading && assets.update())
+		{
+			box_model = assets.get(model_filename, Model.class);
+			loading = false;
+		}
 		
 		Mat webcam = new Mat();
 		if (!vc.grab())
@@ -206,7 +233,7 @@ public class MyGdxGame implements ApplicationListener {
 			for (MatOfPoint2f curve : contours)
 			{
 				MatOfPoint2f approxCurve = new MatOfPoint2f();
-				Imgproc.approxPolyDP(curve, approxCurve, 10, true);
+				Imgproc.approxPolyDP(curve, approxCurve, 50, true);
 				if (approxCurve.rows() == 4 &&
 						isCCConvexPolygon(approxCurve))
 				{
@@ -215,14 +242,19 @@ public class MyGdxGame implements ApplicationListener {
 				}
 			}
 			Imgproc.drawContours(undist_webcam, approx_curves, -1, new Scalar(0, 255, 0));
-			for (MatOfPoint2f c : approx_curves2f)
+			
+			//for (MatOfPoint2f c : approx_curves2f)
+			if (!approx_curves2f.isEmpty())
 			{
+				MatOfPoint2f c = approx_curves2f.get(0);
+				c = adjustPolygonToMatch(c, prev_c);
+				prev_c = c;
 				MatOfPoint3f object_corners = new MatOfPoint3f(new Point3[]
 						{
-						new Point3(0, 0, 0),
-						new Point3(1, 0, 0),
-						new Point3(1, 1, 0),
-						new Point3(0, 1, 0)
+						new Point3(-5, 10, -3),
+						new Point3(5, 10, -3),
+						new Point3(5, 0, -3),
+						new Point3(-5, 0, -3)
 						});
 				Matrix4 transform = correctSolvePnP(object_corners, c,
 						intrinsics, distortion, cam.fieldOfView, webcam.rows());
@@ -232,6 +264,21 @@ public class MyGdxGame implements ApplicationListener {
 				boxes_list.add(new ModelInstance(coord_model[1], transform.cpy()));
 				boxes_list.add(new ModelInstance(coord_model[2], transform.cpy()));
 				boxes_list.add(new ModelInstance(box_model, ttransl.mulLeft(transform.cpy())));
+				
+				//unwarp
+				Mat unwarp_webcam = new Mat(400, 400, webcam.type());
+				MatOfPoint2f dst = new MatOfPoint2f(new Point[] {
+						new Point(0, 0),
+						new Point(unwarp_webcam.rows(), 0),
+						new Point(unwarp_webcam.rows(), unwarp_webcam.cols()),
+						new Point(0, unwarp_webcam.cols())
+				});
+				if (c != null)
+				{
+					Mat warp = Imgproc.getPerspectiveTransform(c, dst);
+					Imgproc.warpPerspective(undist_webcam, unwarp_webcam, warp, unwarp_webcam.size(), Imgproc.INTER_LINEAR);
+					UtilAR.imShow("unwarp", unwarp_webcam);
+				}
 			}
 		}
 		
@@ -278,7 +325,7 @@ public class MyGdxGame implements ApplicationListener {
 			}
 			else
 			{
-				System.out.print("No chessboard found.\n");
+				//System.out.print("No chessboard found.\n");
 			}
 		}
 
@@ -409,4 +456,33 @@ public class MyGdxGame implements ApplicationListener {
 		}
 		return cnt == n;
 	}
+	
+	MatOfPoint2f adjustPolygonToMatch(MatOfPoint2f mp, MatOfPoint2f mq) {
+		Point[] p = mp.toArray();
+		Point[] q = mq.toArray();
+		int n = p.length;
+		//assert p.length == q.length
+		int maxd = 0;
+		double cost = 1.0 / 0.0;
+		for (int d = 0; d < n; d++)
+		{
+			double tc = 0.0;
+			for (int i = 0; i < n; i++)
+				tc += dist2(p[(i + d) % n], q[i]);
+			if (tc < cost)
+			{
+				maxd = d;
+				cost = tc;
+			}
+		}
+		Point[] r = new Point[n];
+		for (int i = 0; i < n; i++)
+			r[i] = p[(i + maxd) % n].clone();
+		return new MatOfPoint2f(r);
+	}
+	
+	double dist2(Point a, Point b) {
+		return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
+	}
+	
 }
