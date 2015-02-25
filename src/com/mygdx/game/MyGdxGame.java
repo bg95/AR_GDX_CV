@@ -4,8 +4,10 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -76,8 +78,33 @@ public class MyGdxGame implements ApplicationListener {
 	MatOfPoint2f prev_c = new MatOfPoint2f(new Mat(4, 2, CvType.CV_32FC1));
 	List<MatOfPoint2f> quad_list = new LinkedList<MatOfPoint2f>();
 
-	AssetManager assets = new AssetManager();
-	boolean loading;
+	//AssetManager assets = new AssetManager();
+	//boolean loading;
+	class ModelInfo
+	{
+		public ModelInfo(String file_name) {
+			asset = new AssetManager();
+			loading = true;
+			asset.load(file_name, Model.class);
+			name = file_name;
+			model = null;
+		}
+		public boolean checkLoaded() {
+			if (loading && asset.update())
+			{
+				model = asset.get(name, Model.class);
+				loading = false;
+				return true;
+			}
+			return !loading;
+		}
+		public MatOfPoint2f quad;
+		AssetManager asset;
+		String name;
+		Model model;
+		boolean loading;
+	};
+	ArrayList<ModelInfo> model_list = new ArrayList<ModelInfo>();
 	
 	@Override
 	public void create () {
@@ -111,42 +138,19 @@ public class MyGdxGame implements ApplicationListener {
 				Usage.Position | Usage.Normal);
 		instance = new ModelInstance(model, 1f, 0.5f, 0.75f);
 		coord_instance = new ModelInstance[3];
-		coord_instance[0] = new ModelInstance(coord_model[0]);
-		coord_instance[1] = new ModelInstance(coord_model[1]);
-		coord_instance[2] = new ModelInstance(coord_model[2]);
 
 		box_model = builder.createBox(1f, 1f, 1f,
 				//new Material(ColorAttribute.createDiffuse(new Color(0.0f, 0.0f, 1.0f, 0.3f))),
 				new Material(new BlendingAttribute(0.3f)),
 				Usage.Position | Usage.Normal);
-		assets.load(model_filename, Model.class);
-		loading = true;
-		//box_model = assets.get("models/g3d/Miku_1_4.g3db", Model.class);
-		//box_model = loader.loadModel(Gdx.files.internal("models/more/Miku_1_4.obj"));
-		//box_model = loader.loadModel(Gdx.files.internal("models/ship/ship.obj"));
-		//BoundingBox bouding_box = new BoundingBox();
-		//box_model.calculateBoundingBox(bouding_box);
-		
-		
-		boxes_instance = new ModelInstance[100];
-		for (int i = 0; i < 100; i++)
-			boxes_instance[i] = new ModelInstance(box_model);
+		model_list.add(new ModelInfo(model_filename));
+		//assets.load(model_filename, Model.class);
+		//loading = true;
 		
 		environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
         environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
-        /*
-        timer = new Timer();
-        timer.scheduleAtFixedRate(new TimerTask(){
 
-			@Override
-			public void run() {
-		        //cam.rotateAround(new Vector3(0, 0, 0), new Vector3(0, 1, 0), 1f);
-		        cam.update();
-			}
-        	
-        }, 0, 50);
-        */
         vc = new VideoCapture(0);
         //vc.open(0);
         if (!vc.isOpened())
@@ -163,12 +167,11 @@ public class MyGdxGame implements ApplicationListener {
 
 	@Override
 	public void render () {
-		
-		if (loading && assets.update())
-		{
-			box_model = assets.get(model_filename, Model.class);
-			loading = false;
-		}
+		for (ModelInfo i : model_list)
+			if (i.checkLoaded())
+			{
+				box_model = i.model;
+			}
 		
 		Mat webcam = new Mat();
 		if (!vc.grab())
