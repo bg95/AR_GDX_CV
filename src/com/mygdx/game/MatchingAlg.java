@@ -3,8 +3,8 @@ package com.mygdx.game;
 public class MatchingAlg {
 
 	public static void maxBipartite(double[][] w, int[] matl, int[] matr) {
-		int n = w.length;
-		int m = w[0].length;
+		int n = matl.length;
+		int m = matr.length;
 		double[] disl = new double[n];
 		double[] disr = new double[m];
 		final double INF = 1.0 / 0.0;
@@ -66,17 +66,21 @@ public class MatchingAlg {
 							disl[matr[j]] = disr[j] - w[matr[j]][j];
 						}
 					}
+				/*
 				for (int i = 0; i < matl.length; i++)
 					System.out.print("disl[" + i + "] = " + disl[i] + "\n");
 				for (int i = 0; i < matr.length; i++)
 					System.out.print("disr[" + i + "] = " + disr[i] + "\n");
+				*/
 			}
 			//if < 0, break
+			/*
 			for (int i = 0; i < matl.length; i++)
 				System.out.print("disl[" + i + "] = " + disl[i] + "\n");
 			for (int i = 0; i < matr.length; i++)
 				System.out.print("disr[" + i + "] = " + disr[i] + "\n");
 			System.out.print("maxdr = " + maxdr + "\n");
+			*/
 			if (maxdr < 0)
 				break;
 			//update
@@ -89,10 +93,12 @@ public class MatchingAlg {
 				matr[r] = precr[r];
 				r = t;
 			}
+			/*
 			for (int i = 0; i < matl.length; i++)
 				System.out.print("matl[" + i + "] = " + matl[i] + "\n");
 			for (int i = 0; i < matr.length; i++)
 				System.out.print("matr[" + i + "] = " + matr[i] + "\n");
+				*/
 		}
 	}
 	

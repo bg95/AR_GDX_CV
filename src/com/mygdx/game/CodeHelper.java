@@ -10,6 +10,9 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.Point;
+import org.opencv.imgproc.Imgproc;
 
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.BufferedImageLuminanceSource;
@@ -38,6 +41,26 @@ public class CodeHelper {
         out.getRaster().setDataElements(0, 0, in.width(), in.height(), data);
         return out;
     }
+	
+	public static String decodeInQuad(Mat image, MatOfPoint2f quad) {
+		Mat unwarp_webcam = new Mat(400, 400, image.type());
+		MatOfPoint2f dst = new MatOfPoint2f(new Point[] {
+				new Point(0, 0),
+				new Point(unwarp_webcam.rows(), 0),
+				new Point(unwarp_webcam.rows(), unwarp_webcam.cols()),
+				new Point(0, unwarp_webcam.cols())
+		});
+		if (quad != null)
+		{
+			Mat warp = Imgproc.getPerspectiveTransform(quad, dst);
+			Imgproc.warpPerspective(image, unwarp_webcam, warp, unwarp_webcam.size(), Imgproc.INTER_LINEAR);
+			//UtilAR.imShow("unwarp", unwarp_webcam);
+			String code = CodeHelper.decode(unwarp_webcam);
+			//System.out.print("QR code: " + code + "\n");
+			return code;
+		}
+		return "";
+	}
 	
 	public static String decode(Mat image) {
 		try {

@@ -70,29 +70,39 @@ public class MyGdxGame implements ApplicationListener {
 	//final String model_filename = "models/more/textures/Miku_1_4.g3db";
 	//final String model_filename = "models/more/EnoshimaJunko/TEX/junko.g3db";
 	final String model_filename = "models/BRS/BRSDigitrevx/BRS.g3db";
+	final int MAX_MODELS = 15;
 	
 	Timer timer;
 	VideoCapture vc;
 	CameraCalibrator calib;
 	//double m_z_scale = -1.0;
 	MatOfPoint2f prev_c = new MatOfPoint2f(new Mat(4, 2, CvType.CV_32FC1));
-	List<MatOfPoint2f> quad_list = new LinkedList<MatOfPoint2f>();
 
 	//AssetManager assets = new AssetManager();
 	//boolean loading;
 	class ModelInfo
 	{
-		public ModelInfo(String file_name) {
+		public ModelInfo(String file_name, MatOfPoint2f c) {
 			asset = new AssetManager();
 			loading = true;
 			asset.load(file_name, Model.class);
 			name = file_name;
 			model = null;
+			quad = c;
+			double b = Math.random();
+			double g = Math.random();
+			double r = Math.random();
+			double v = Math.max(Math.max(r, g), b) / 255.0;
+			color = new Scalar(b / v, g / v, r / v);
 		}
 		public boolean checkLoaded() {
 			if (loading && asset.update())
 			{
 				model = asset.get(name, Model.class);
+				if (model == null)
+					model = new ModelBuilder().createBox(3f, 3f, 3f,
+							new Material(ColorAttribute.createDiffuse(Color.GREEN)),
+							Usage.Position | Usage.Normal);
 				loading = false;
 				return true;
 			}
@@ -103,6 +113,7 @@ public class MyGdxGame implements ApplicationListener {
 		String name;
 		Model model;
 		boolean loading;
+		Scalar color;
 	};
 	ArrayList<ModelInfo> model_list = new ArrayList<ModelInfo>();
 	
@@ -143,7 +154,7 @@ public class MyGdxGame implements ApplicationListener {
 				//new Material(ColorAttribute.createDiffuse(new Color(0.0f, 0.0f, 1.0f, 0.3f))),
 				new Material(new BlendingAttribute(0.3f)),
 				Usage.Position | Usage.Normal);
-		model_list.add(new ModelInfo(model_filename));
+		//model_list.add(new ModelInfo(model_filename));
 		//assets.load(model_filename, Model.class);
 		//loading = true;
 		
@@ -220,7 +231,7 @@ public class MyGdxGame implements ApplicationListener {
 		intrinsics = calib.getCameraMatrix();
 		distortion = new MatOfDouble(calib.getDistortionCoefficients());
 		
-		ArrayList<ModelInstance> boxes_list = new ArrayList<ModelInstance>();
+		ArrayList<ModelInstance> instances_list = new ArrayList<ModelInstance>();
 		if (calib.isCalibrated()) //contours
 		{
 			List<MatOfPoint> contours_3 = new ArrayList<MatOfPoint>();
@@ -243,31 +254,74 @@ public class MyGdxGame implements ApplicationListener {
 					approx_curves2f.add(approxCurve);
 				}
 			}
-			Imgproc.drawContours(undist_webcam, approx_curves, -1, new Scalar(0, 255, 0));
 			
-			//matchQuads(quad_list, approx_curves2f, matching);
+			List<MatOfPoint2f> quad_list = new ArrayList<MatOfPoint2f>();
+			int[] matching = new int[approx_curves2f.size()];
+			for (ModelInfo i : model_list)
+				quad_list.add(i.quad);
+			int[] matching_inv = new int[quad_list.size()];
+			matchQuads(approx_curves2f, quad_list, matching, matching_inv);
 			
-			//for (MatOfPoint2f c : approx_curves2f)
+			MatOfPoint3f object_corners = new MatOfPoint3f(new Point3[]
+					{
+					new Point3(-5, 10, -3),
+					new Point3(5, 10, -3),
+					new Point3(5, 0, -3),
+					new Point3(-5, 0, -3)
+					});
+			instances_list.clear();
+			int i = 0;
+			for (MatOfPoint2f c : approx_curves2f)
+			{
+				ModelInfo model_info;
+				if (matching[i] == -1) //new quad
+				{
+					model_info = new ModelInfo(model_filename, c);
+					model_list.add(model_info);
+					
+					if (model_list.size() > MAX_MODELS)
+					{
+						model_list.remove(0);
+					}
+					System.out.print("New model created, currently " + model_list.size() + " models\n");
+				}
+				else //old quad, renew
+				{
+					model_info = model_list.get(matching[i]);
+					c = adjustPolygonToMatch(c, model_info.quad);
+					model_info.quad = c;
+					System.out.print("Old quad " + i + "," + matching[i] + "\n");
+				}
+				i++;
+				if (model_info.checkLoaded())
+				{
+					Matrix4 transform = correctSolvePnP(object_corners, c,
+							intrinsics, distortion, cam.fieldOfView, webcam.rows());
+					//Matrix4 ttransl = new Matrix4();
+					//ttransl.translate(0.5f, 0.5f, -0.5f);
+					instances_list.add(new ModelInstance(coord_model[0], transform.cpy()));
+					instances_list.add(new ModelInstance(coord_model[1], transform.cpy()));
+					instances_list.add(new ModelInstance(coord_model[2], transform.cpy()));
+					//instances_list.add(new ModelInstance(model_info.model, ttransl.mulLeft(transform.cpy())));
+				}
+				List<MatOfPoint> tmp = new ArrayList<MatOfPoint>();
+				tmp.add(new MatOfPoint(c.toArray()));
+				Imgproc.drawContours(undist_webcam, tmp, -1, model_info.color);
+			}
+			/*
 			if (!approx_curves2f.isEmpty())
 			{
 				MatOfPoint2f c = approx_curves2f.get(0);
 				c = adjustPolygonToMatch(c, prev_c);
 				prev_c = c;
-				MatOfPoint3f object_corners = new MatOfPoint3f(new Point3[]
-						{
-						new Point3(-5, 10, -3),
-						new Point3(5, 10, -3),
-						new Point3(5, 0, -3),
-						new Point3(-5, 0, -3)
-						});
 				Matrix4 transform = correctSolvePnP(object_corners, c,
 						intrinsics, distortion, cam.fieldOfView, webcam.rows());
 				Matrix4 ttransl = new Matrix4();
 				ttransl.translate(0.5f, 0.5f, -0.5f);
-				boxes_list.add(new ModelInstance(coord_model[0], transform.cpy()));
-				boxes_list.add(new ModelInstance(coord_model[1], transform.cpy()));
-				boxes_list.add(new ModelInstance(coord_model[2], transform.cpy()));
-				boxes_list.add(new ModelInstance(box_model, ttransl.mulLeft(transform.cpy())));
+				instances_list.add(new ModelInstance(coord_model[0], transform.cpy()));
+				instances_list.add(new ModelInstance(coord_model[1], transform.cpy()));
+				instances_list.add(new ModelInstance(coord_model[2], transform.cpy()));
+				instances_list.add(new ModelInstance(box_model, ttransl.mulLeft(transform.cpy())));
 				
 				//unwarp
 				Mat unwarp_webcam = new Mat(400, 400, webcam.type());
@@ -286,73 +340,17 @@ public class MyGdxGame implements ApplicationListener {
 					System.out.print("QR code: " + code + "\n");
 				}
 			}
-		}
-		
-		MatOfPoint2f corners = new MatOfPoint2f();
-		Size size = new Size(9, 6);
-		
-		if (calib.isCalibrated())
-		{
-			boolean corners_found = Calib3d.findChessboardCorners(webcam, size, corners, 
-					Calib3d.CALIB_CB_ADAPTIVE_THRESH + Calib3d.CALIB_CB_NORMALIZE_IMAGE + Calib3d.CALIB_CB_FAST_CHECK + Calib3d.CALIB_CB_FILTER_QUADS);
-			if (corners_found)
-			{
-				//Imgproc.cornerSubPix(gray, corners, new Size(11, 11), new Size(-1, -1), new TermCriteria(TermCriteria.EPS, 30, 0.1));
-
-				System.out.print("Chessboard found.\n");
-				//Calib3d.drawChessboardCorners(webcam, size, corners, corners_found);
-				Point[] corners_array = corners.toArray();
-		
-				Point3[] object_corners_array = new Point3[(int) (size.height * size.width)];
-				for (int i = 0; i < size.height; i++)
-					for (int j = 0; j < size.width; j++)
-						object_corners_array[(int) (i * size.width + j)] = new Point3(j, i, 0f);
-				MatOfPoint3f object_corners = new MatOfPoint3f(object_corners_array);
-				
-				Matrix4 transform = correctSolvePnP(object_corners, corners,
-						intrinsics, distortion, cam.fieldOfView, webcam.rows());
-				
-				
-				//translation.put(2, 0, 0.06 * translation.get(2, 0)[0]);
-				//UtilAR.setCameraByRT(rotation, translation, cam);
-				//cam.transform(transform.inv());
-				
-				instance = new ModelInstance(model);
-				for (int i = 0; i < 3; i++)
-					coord_instance[i] = new ModelInstance(coord_model[i]);
-				
-				for (int i = 0; i < object_corners_array.length; i++)
-				{
-					Matrix4 ttransl = new Matrix4();
-					ttransl.translate((float) object_corners_array[i].x - 0.5f, (float) object_corners_array[i].y - 0.5f, (float) object_corners_array[i].z - 0.5f);
-					boxes_instance[i] = new ModelInstance(box_model, ttransl.mulLeft(transform));
-				}
-				
-			}
-			else
-			{
-				//System.out.print("No chessboard found.\n");
-			}
+			*/
 		}
 
 		UtilAR.imDrawBackground(undist_webcam);
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        //Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
- 
-        //cam_control.update();
         
 		if (calib.isCalibrated())
 		{
 	        model_batch.begin(cam);
-	        //model_batch.render(instance, environment);
-	        /*
-	        for (int i = 0; i < size.width * size.height; i++)
-	        	if (i % 2 == 0)
-	        		model_batch.render(boxes_instance[i], environment);
-	        		*/
-	        for (ModelInstance m : boxes_list)
+	        for (ModelInstance m : instances_list)
 	        	model_batch.render(m, environment);
-	        
 	        model_batch.end();
 		}
 	}
@@ -487,8 +485,71 @@ public class MyGdxGame implements ApplicationListener {
 		return new MatOfPoint2f(r);
 	}
 	
+	double distPoly(MatOfPoint2f mp, MatOfPoint2f mq) {
+		Point[] p = mp.toArray();
+		Point[] q = mq.toArray();
+		int n = p.length;
+		//assert p.length == q.length
+		int maxd = 0;
+		double cost = 1.0 / 0.0;
+		for (int d = 0; d < n; d++)
+		{
+			double tc = 0.0;
+			for (int i = 0; i < n; i++)
+				tc += dist2(p[(i + d) % n], q[i]);
+			if (tc < cost)
+			{
+				maxd = d;
+				cost = tc;
+			}
+		}
+		return cost;
+	}
+	
 	double dist2(Point a, Point b) {
 		return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
+	}
+	
+	double quad_match_thres = 1E3;
+	double quad_match_offset = 2E6 * 4;
+	void matchQuads(List<MatOfPoint2f> src, List<MatOfPoint2f> dst, int[] matching, int[] matching_inv) {
+		double[][] w = new double[src.size()][dst.size()];
+		int i, j;
+		i = 0;
+		for (MatOfPoint2f p : src)
+		{
+			j = 0;
+			for (MatOfPoint2f q : dst)
+			{
+				w[i][j] = quad_match_offset -distPoly(p, q);
+				j++;
+			}
+			i++;
+		}
+		MatchingAlg.maxBipartite(w, matching, new int[dst.size()]);
+		for (i = 0; i < src.size(); i++)
+			if (matching[i] != -1)
+			{
+				j = matching[i];
+				if (w[i][j] < quad_match_offset - quad_match_thres)
+				{
+					matching_inv[j] = -1;
+					matching[i] = -1;
+				}
+			}
+		double avg_dist = 0.0;
+		int cnt_mat = 0;
+		for (i = 0; i < src.size(); i++)
+			if (matching[i] != -1)
+			{
+				cnt_mat++;
+				avg_dist += quad_match_offset - w[i][matching[i]];
+			}
+		if (cnt_mat != 0)
+		{
+			avg_dist /= cnt_mat;
+			//quad_match_thres += (avg_dist * 3.0 - quad_match_thres) * 0.1;
+		}
 	}
 	
 }
