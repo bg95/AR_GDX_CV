@@ -65,7 +65,8 @@ public class MyGdxGame implements ApplicationListener {
 	public Model box_model;
 	public ModelInstance[] boxes_instance;
 	public Environment environment;
-	
+
+	static final ModelBuilder model_builder = new ModelBuilder();
 	final File calib_file = new File("camera.dat");
 	//final String model_filename = "models/more/textures/Miku_1_4.g3db";
 	//final String model_filename = "models/more/EnoshimaJunko/TEX/junko.g3db";
@@ -77,15 +78,16 @@ public class MyGdxGame implements ApplicationListener {
 	CameraCalibrator calib;
 	//double m_z_scale = -1.0;
 	MatOfPoint2f prev_c = new MatOfPoint2f(new Mat(4, 2, CvType.CV_32FC1));
+	Mat webcam, gray, binary, undist_webcam;
+	AssetManager assets = new AssetManager();
 
 	//AssetManager assets = new AssetManager();
 	//boolean loading;
 	class ModelInfo
 	{
 		public ModelInfo(String file_name, MatOfPoint2f c) {
-			asset = new AssetManager();
 			loading = true;
-			asset.load(file_name, Model.class);
+			assets.load(file_name, Model.class);
 			name = file_name;
 			model = null;
 			quad = c;
@@ -96,11 +98,11 @@ public class MyGdxGame implements ApplicationListener {
 			color = new Scalar(b / v, g / v, r / v);
 		}
 		public boolean checkLoaded() {
-			if (loading && asset.update())
+			if (loading && assets.update())
 			{
-				model = asset.get(name, Model.class);
+				model = assets.get(name, Model.class);
 				if (model == null)
-					model = new ModelBuilder().createBox(3f, 3f, 3f,
+					model = model_builder.createBox(3f, 3f, 3f,
 							new Material(ColorAttribute.createDiffuse(Color.GREEN)),
 							Usage.Position | Usage.Normal);
 				loading = false;
@@ -109,7 +111,7 @@ public class MyGdxGame implements ApplicationListener {
 			return !loading;
 		}
 		public MatOfPoint2f quad;
-		AssetManager asset;
+		//AssetManager asset;
 		String name;
 		Model model;
 		boolean loading;
@@ -167,31 +169,34 @@ public class MyGdxGame implements ApplicationListener {
         if (!vc.isOpened())
         	System.out.print("unable to open camera\n");
 
-		Mat webcam = new Mat();
+		webcam = new Mat();
 		if (!vc.grab())
 			System.out.print("unable to grab capture\n");
 		if (!vc.retrieve(webcam))
 			System.out.print("unable to retrieve capture\n");
+		gray = new Mat(webcam.rows(), webcam.cols(), CvType.CV_8UC1);
+		binary = new Mat(webcam.rows(), webcam.cols(), CvType.CV_8UC1);
 		calib = new CameraCalibrator(webcam.cols(), webcam.rows());
+		undist_webcam = new Mat();
 		calib.load(calib_file);
 	}
 
 	@Override
 	public void render () {
+
+		//System.out.print("Render start\n");
+		//System.out.print(System.currentTimeMillis() + "\n");
+		
 		for (ModelInfo i : model_list)
 			if (i.checkLoaded())
 			{
 				box_model = i.model;
 			}
 		
-		Mat webcam = new Mat();
 		if (!vc.grab())
 			System.out.print("unable to grab capture\n");
 		if (!vc.retrieve(webcam))
 			System.out.print("unable to retrieve capture\n");
-		Mat gray = new Mat(webcam.rows(), webcam.cols(), CvType.CV_8UC1);
-		Mat binary = new Mat(webcam.rows(), webcam.cols(), CvType.CV_8UC1);
-		Mat undist_webcam = new Mat();
 		if (!calib.isCalibrated())
 		{
 			Imgproc.cvtColor(webcam, gray, Imgproc.COLOR_BGR2GRAY);
@@ -204,16 +209,18 @@ public class MyGdxGame implements ApplicationListener {
 				try {
 					calib.save(calib_file);
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 					System.out.print("Saving camera info failed\n");
 				}
 			}
-			undist_webcam = webcam;
+			undist_webcam = webcam.clone();
 		}
 		else
 			Imgproc.undistort(webcam, undist_webcam, calib.getCameraMatrix(), calib.getDistortionCoefficients());
 
+		//System.out.print("Undistort completed\n");
+		//System.out.print(System.currentTimeMillis() + "\n");
+		
 		Imgproc.cvtColor(undist_webcam, gray, Imgproc.COLOR_BGR2GRAY);
 		//Imgproc.threshold(gray, binary, 80, 220, Imgproc.THRESH_BINARY);
 		Imgproc.adaptiveThreshold(gray, binary, 255,
@@ -230,7 +237,9 @@ public class MyGdxGame implements ApplicationListener {
 		MatOfDouble distortion;
 		intrinsics = calib.getCameraMatrix();
 		distortion = new MatOfDouble(calib.getDistortionCoefficients());
-		
+
+		//System.out.print("Input finished\n");
+		//System.out.print(System.currentTimeMillis() + "\n");
 		ArrayList<ModelInstance> instances_list = new ArrayList<ModelInstance>();
 		if (calib.isCalibrated()) //contours
 		{
@@ -254,6 +263,8 @@ public class MyGdxGame implements ApplicationListener {
 					approx_curves2f.add(approxCurve);
 				}
 			}
+			//System.out.print("Find quads finished\n");
+			//System.out.print(System.currentTimeMillis() + "\n");
 			
 			List<MatOfPoint2f> quad_list = new ArrayList<MatOfPoint2f>();
 			int[] matching = new int[approx_curves2f.size()];
@@ -273,6 +284,9 @@ public class MyGdxGame implements ApplicationListener {
 			int i = 0;
 			for (MatOfPoint2f c : approx_curves2f)
 			{
+				//System.out.print("For quadrilateral " + i + "\n");
+				//System.out.print(System.currentTimeMillis() + "\n");
+				
 				ModelInfo model_info;
 				if (matching[i] == -1) //new quad
 				{
@@ -281,33 +295,35 @@ public class MyGdxGame implements ApplicationListener {
 					
 					if (model_list.size() > MAX_MODELS)
 					{
-						model_list.remove(0);
+						//model_list.remove(0);
 					}
-					System.out.print("New model created, currently " + model_list.size() + " models\n");
+					//System.out.print("New model created, currently " + model_list.size() + " models\n");
 				}
 				else //old quad, renew
 				{
 					model_info = model_list.get(matching[i]);
 					c = adjustPolygonToMatch(c, model_info.quad);
 					model_info.quad = c;
-					System.out.print("Old quad " + i + "," + matching[i] + "\n");
+					//System.out.print("Old quad " + i + "," + matching[i] + "\n");
 				}
 				i++;
 				if (model_info.checkLoaded())
 				{
 					Matrix4 transform = correctSolvePnP(object_corners, c,
 							intrinsics, distortion, cam.fieldOfView, webcam.rows());
-					//Matrix4 ttransl = new Matrix4();
-					//ttransl.translate(0.5f, 0.5f, -0.5f);
+					Matrix4 ttransl = new Matrix4();
+					ttransl.translate(0.5f, 0.5f, -0.5f);
 					instances_list.add(new ModelInstance(coord_model[0], transform.cpy()));
 					instances_list.add(new ModelInstance(coord_model[1], transform.cpy()));
 					instances_list.add(new ModelInstance(coord_model[2], transform.cpy()));
-					//instances_list.add(new ModelInstance(model_info.model, ttransl.mulLeft(transform.cpy())));
+					instances_list.add(new ModelInstance(model_info.model, ttransl.mulLeft(transform.cpy())));
 				}
 				List<MatOfPoint> tmp = new ArrayList<MatOfPoint>();
 				tmp.add(new MatOfPoint(c.toArray()));
 				Imgproc.drawContours(undist_webcam, tmp, -1, model_info.color);
 			}
+			//System.out.print("All " + i + " quadrilaterals processed\n");
+			//System.out.print(System.currentTimeMillis() + "\n");
 			/*
 			if (!approx_curves2f.isEmpty())
 			{
@@ -353,6 +369,8 @@ public class MyGdxGame implements ApplicationListener {
 	        	model_batch.render(m, environment);
 	        model_batch.end();
 		}
+		//System.out.print("Render end\n");
+		//System.out.print(System.currentTimeMillis() + "\n");
 	}
 
 	@Override
@@ -416,7 +434,7 @@ public class MyGdxGame implements ApplicationListener {
 		double alpha = fov / 180.0 * Math.PI *
 				Math.sqrt(d_corners.x * d_corners.x + d_corners.y * d_corners.y) / webcam_rows;
 		double beta = Math.sqrt(dp.x * dp.x + dp.y * dp.y);
-		System.out.print("p0=" + p0.x + "," + p0.y + "\n");
+		//System.out.print("p0=" + p0.x + "," + p0.y + "\n");
 		double z_scale = beta / alpha;
 		return z_scale;
 	}
@@ -439,7 +457,7 @@ public class MyGdxGame implements ApplicationListener {
 			m_z_scale = z_scale;
 		System.out.print("m_z_scale = " + m_z_scale + "\n");
 		*/
-		System.out.print("z_scale = " + z_scale + "\n");
+		//System.out.print("z_scale = " + z_scale + "\n");
 		translation.put(2, 0, z_scale * translation.get(2, 0)[0]);
 		transform = toMatrix4(rotation, translation);
 		return transform;

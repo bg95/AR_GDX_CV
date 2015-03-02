@@ -42,7 +42,7 @@ public class MatchingAlg {
 						maxd = disl[i];
 						maxi = i;
 					}
-				System.out.print("maxi = " + maxi + "\n");
+				//System.out.print("maxi = " + maxi + "\n");
 				if (maxi == -1 || maxd == -INF)
 					break;
 				visited[maxi] = true;
