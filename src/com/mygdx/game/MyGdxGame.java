@@ -654,8 +654,8 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		System.out.println("Drawing model...");
 		// Position the eye behind the origin.
 	    final float eyeX = 0.0f;
-	    final float eyeY = 0.0f;
-	    final float eyeZ = 15f;
+	    final float eyeY = 15.0f;
+	    final float eyeZ = 20f;
 	 
 	    // We are looking toward the distance
 	    final float lookX = 0.0f;
@@ -672,10 +672,26 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	    // NOTE: In OpenGL 1, a ModelView matrix is used, which is a combination of a model and
 	    // view matrix. In OpenGL 2, we can keep track of these matrices separately if we choose.
 	    Matrix.setLookAtM(mViewMatrix , 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ);
-	
-	    jogl.setMatrix(mViewMatrix);
+	    
+	    final float ratio = (float) 640 / 480;
+	    final float left = -ratio;
+	    final float right = ratio;
+	    final float bottom = -1.0f;
+	    final float top = 1.0f;
+	    final float near = 1.0f;
+	    final float far = 100.0f;
+	 
+	    float[] mProjectionMatrix = new float[16];
+		Matrix.frustumM(mProjectionMatrix, 0, left, right, bottom, top, near, far);
+
+        float[] mvp_matrix = new float[16];
+		Matrix.multiplyMM(mvp_matrix , 0, mProjectionMatrix, 0, mViewMatrix, 0);
+        
+		jogl.glPushMatrix();
+	    jogl.setMatrix(mvp_matrix);
 	    mmd_model.update(System.currentTimeMillis() / 10 % 1000);
 		mmd_model.draw(jogl);
+		jogl.glPopMatrix();
 	}
 
 	//IGLTextureProvider.Handler

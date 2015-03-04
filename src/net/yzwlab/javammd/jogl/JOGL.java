@@ -83,7 +83,9 @@ public class JOGL implements IGL, IGLTextureProvider {
 		+	"varying vec2 v_texcoord;\n"
 		+	"void main (void) {\n"
 		+	"	vec4 color = texture2D(t_reflectance, v_texcoord);\n"
-		+	"	gl_FragColor = vec4(0,0,0,1);//gl_FragColor = color * (vec4(v_diffuse) + i_ambient);\n"
+		+	"	//vec4 color = vec4(1,1,1,1);\n"
+		+	"	gl_FragColor = color * (vec4(v_diffuse) + i_ambient);\n"
+		+	"	gl_FragColor.a = 1.0f;\n"
 		+	"}";
 
 	int mVertexHandle, mNormalHandle, mTexcoordHandle;
@@ -260,44 +262,11 @@ public class JOGL implements IGL, IGLTextureProvider {
 			gl.glVertexAttribPointer(mNormalHandle, 3, GL20.GL_FLOAT, normalize_enabled, ATTRIB_SIZE * FLOAT_SIZE, attrib_buffer);
 			gl.glEnableVertexAttribArray(mNormalHandle);
 		}
-
-		// Position the eye behind the origin.
-	    final float eyeX = 0.0f;
-	    final float eyeY = 10.0f;
-	    final float eyeZ = 15f;//(float) (System.currentTimeMillis() % 5000 + 100.0);
-	 
-	    // We are looking toward the distance
-	    final float lookX = 0.0f;
-	    final float lookY = 0.0f;
-	    final float lookZ = -5.0f;
-	 
-	    // Set our up vector. This is where our head would be pointing were we holding the camera.
-	    final float upX = 0.0f;
-	    final float upY = 1.0f;
-	    final float upZ = 0.0f;
-	 
-	    float[] mViewMatrix = new float[16];
-		// Set the view matrix. This matrix can be said to represent the camera position.
-	    // NOTE: In OpenGL 1, a ModelView matrix is used, which is a combination of a model and
-	    // view matrix. In OpenGL 2, we can keep track of these matrices separately if we choose.
-	    Matrix.setLookAtM(mViewMatrix , 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ);
-	    final float ratio = (float) 640 / 480;
-	    final float left = -ratio;
-	    final float right = ratio;
-	    final float bottom = -1.0f;
-	    final float top = 1.0f;
-	    final float near = 1.0f;
-	    final float far = 1000.0f;
-	 
-	    float[] mProjectionMatrix = new float[16];
-		Matrix.frustumM(mProjectionMatrix, 0, left, right, bottom, top, near, far);
-	    
-        Matrix.multiplyMM(mvp_matrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
-		
-		//Matrix.setIdentityM(mvp_matrix, 0);
 		if (mMVPMatrixHandle != -1)
 			gl.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvp_matrix, 0);
-		//Matrix.setIdentityM(mvp_matrix, 0);
+		if (mEcLightDirHandle != -1)
+			gl.glUniform3f(mEcLightDirHandle, 0f, 0f, -1f);
+
 		float[] normal_matrix = new float[9];
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < 3; j++)
@@ -310,8 +279,7 @@ public class JOGL implements IGL, IGLTextureProvider {
 		for (int s = 0; s < vtx_cnt; s++)
 			indices.put((short) (s > 32767 ? s - 65536 : s));
 		indices.position(0);
-		//gl.glDrawElements(GL20.GL_TRIANGLES, vtx_cnt, GL20.GL_FLOAT, indices);
-		System.out.println("Drawing, #vtx=" + vtx_cnt + ", #nrm=" + nrm_cnt + ", #tex=" + tex_cnt);
+		//System.out.println("Drawing, #vtx=" + vtx_cnt + ", #nrm=" + nrm_cnt + ", #tex=" + tex_cnt);
 		gl.glDrawArrays(GL20.GL_TRIANGLES, 0, vtx_cnt);
 		
 		///for test
