@@ -3,6 +3,11 @@ package com.mygdx.game;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -10,6 +15,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import net.yzwlab.javammd.GLTexture;
+import net.yzwlab.javammd.IGLTextureProvider;
+import net.yzwlab.javammd.IGLTextureProvider.Handler;
+import net.yzwlab.javammd.ReadException;
+import net.yzwlab.javammd.jogl.JOGL;
+import net.yzwlab.javammd.jogl.io.FileBuffer;
+import net.yzwlab.javammd.model.MMDModel;
 
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
@@ -54,7 +67,7 @@ import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 
-public class MyGdxGame implements ApplicationListener {
+public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handler {
 	public PerspectiveCamera cam;
 	public CameraInputController cam_control;
 	public ModelBatch model_batch;
@@ -179,6 +192,8 @@ public class MyGdxGame implements ApplicationListener {
 		calib = new CameraCalibrator(webcam.cols(), webcam.rows());
 		undist_webcam = new Mat();
 		calib.load(calib_file);
+		
+		testInit();
 	}
 
 	@Override
@@ -321,6 +336,25 @@ public class MyGdxGame implements ApplicationListener {
 				List<MatOfPoint> tmp = new ArrayList<MatOfPoint>();
 				tmp.add(new MatOfPoint(c.toArray()));
 				Imgproc.drawContours(undist_webcam, tmp, -1, model_info.color);
+				
+
+				//unwarp
+				Mat unwarp_webcam = new Mat(400, 400, webcam.type());
+				MatOfPoint2f dst = new MatOfPoint2f(new Point[] {
+						new Point(0, 0),
+						new Point(unwarp_webcam.rows(), 0),
+						new Point(unwarp_webcam.rows(), unwarp_webcam.cols()),
+						new Point(0, unwarp_webcam.cols())
+				});
+				if (c != null)
+				{
+					Mat warp = Imgproc.getPerspectiveTransform(c, dst);
+					Imgproc.warpPerspective(undist_webcam, unwarp_webcam, warp, unwarp_webcam.size(), Imgproc.INTER_LINEAR);
+					UtilAR.imShow("unwarp", unwarp_webcam);
+					String code = CodeHelper.decode(unwarp_webcam);
+					System.out.print("QR code: " + code + "\n");
+				}
+				
 			}
 			//System.out.print("All " + i + " quadrilaterals processed\n");
 			//System.out.print(System.currentTimeMillis() + "\n");
@@ -359,16 +393,22 @@ public class MyGdxGame implements ApplicationListener {
 			*/
 		}
 
-		UtilAR.imDrawBackground(undist_webcam);
+		//UtilAR.imDrawBackground(undist_webcam);
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        
+	    Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 0.5f);
+	    Gdx.gl.glClear(Gdx.gl.GL_COLOR_BUFFER_BIT);
+		//new TestDrawer(Gdx.gl, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());//.onDrawFrame();
+		
+		testDraw();
+		
 		if (calib.isCalibrated())
 		{
 	        model_batch.begin(cam);
 	        for (ModelInstance m : instances_list)
 	        	model_batch.render(m, environment);
 	        model_batch.end();
-		}
+	       
+	     }
 		//System.out.print("Render end\n");
 		//System.out.print(System.currentTimeMillis() + "\n");
 	}
@@ -568,6 +608,87 @@ public class MyGdxGame implements ApplicationListener {
 			avg_dist /= cnt_mat;
 			//quad_match_thres += (avg_dist * 3.0 - quad_match_thres) * 0.1;
 		}
+	}
+
+	//File pmd_dir = new File("mmd/Models/Tda Hagane Miku APPEND/Hagane APPEND V2/Tda Hagane Miku.pmx");
+	//File pmd_dir = new File("mmd/Models/Tda2698489/Tda®¹~NEAyh_Ver1.00(nCq[üÏ).pmx");
+	File pmd_dir = new File("mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd");
+	//File pmd_dir = new File("mmd/Models/saberlily/saberlily1.pmd");
+	File vmd_dir = new File("mmd/VMD/aoitori.vmd");
+	boolean loaded = false;
+	JOGL jogl;
+	MMDModel mmd_model;
+	void testInit() {
+		
+		//new TestDrawer(Gdx.gl30, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());		
+		jogl = new JOGL(pmd_dir.getParentFile(), Gdx.gl);
+		mmd_model = new MMDModel();
+		try {
+			System.out.println("Start loading pmd");
+			mmd_model.openPMD(new FileBuffer(pmd_dir));
+			System.out.println("Start loading vmd");
+			mmd_model.openVMD(new FileBuffer(vmd_dir));
+		} catch (ReadException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		for (int j = 0; j < mmd_model.getFaceCount(); j++) {
+			System.out.println("Face #" + String.valueOf(j + 1) + ": "
+					+ mmd_model.getFaceName(j));
+		}
+		for (int j = 0; j < mmd_model.getBoneCount(); j++) {
+			System.out.println("Bone #" + String.valueOf(j + 1) + ": "
+					+ new String(mmd_model.getBone(j).getName()));
+		}
+		if (loaded == false) {
+			try {
+				mmd_model.prepare(jogl, this);
+			} catch (ReadException e) {
+				e.printStackTrace();
+			}
+			loaded = true;
+		}
+	}
+	
+	void testDraw() {		
+		System.out.println("Drawing model...");
+		// Position the eye behind the origin.
+	    final float eyeX = 0.0f;
+	    final float eyeY = 0.0f;
+	    final float eyeZ = 15f;
+	 
+	    // We are looking toward the distance
+	    final float lookX = 0.0f;
+	    final float lookY = 0.0f;
+	    final float lookZ = -5.0f;
+	 
+	    // Set our up vector. This is where our head would be pointing were we holding the camera.
+	    final float upX = 0.0f;
+	    final float upY = 1.0f;
+	    final float upZ = 0.0f;
+	 
+	    float[] mViewMatrix = new float[16];
+		// Set the view matrix. This matrix can be said to represent the camera position.
+	    // NOTE: In OpenGL 1, a ModelView matrix is used, which is a combination of a model and
+	    // view matrix. In OpenGL 2, we can keep track of these matrices separately if we choose.
+	    Matrix.setLookAtM(mViewMatrix , 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ);
+	
+	    jogl.setMatrix(mViewMatrix);
+	    mmd_model.update(System.currentTimeMillis() / 10 % 1000);
+		mmd_model.draw(jogl);
+	}
+
+	//IGLTextureProvider.Handler
+	@Override
+	public void onSuccess(byte[] filename, GLTexture desc) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onError(byte[] filename, Throwable error) {
+		// TODO Auto-generated method stub
+		error.printStackTrace();
 	}
 	
 }
