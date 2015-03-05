@@ -79,8 +79,12 @@ public class JOGL implements IGL, IGLTextureProvider {
 		+	"	vec3 ec_normal = normalize(normal_matrix * a_normal);\n"
 		+	"	// emit diffuse scale factor, texcoord, and position\n"
 		+	"	float v_diffuse = max(dot(ec_light_dir, ec_normal), 0.0);\n"
-		+	"	float v_specular = pow(abs(dot(ec_light_dir, ec_normal)), m_shininess);\n"
-		+	"	v_material = vec4(vec3(v_diffuse + v_specular), 0.5) +"
+		+	"	vec3 ec_reflected = normalize(2.0 * dot(ec_light_dir, ec_normal) * ec_normal - ec_light_dir);\n"
+		+	"	//float v_specular = pow(max(ec_reflected[2], 0.0), m_shininess);\n"
+		+	"	//v_specular = max(v_specular, 0f);\n"
+		+	"	float v_specular = 1.0;\n"
+		+	"	for (int i = 0; i < int(m_shininess); i++) v_specular *= max(ec_reflected[2], 0.0);\n"
+		+	"	v_material = vec4(vec3(v_diffuse + v_specular), 0.5) + "
 		+ 	"			vec4(m_ambiant[3] * vec3(m_ambiant[0], m_ambiant[1], m_ambiant[2]), 0.5); //emitted\n"
 		+	"	v_material_emission = m_emission; //emitted\n"
 		+	"	v_texcoord = a_texcoord;\n"
@@ -98,7 +102,9 @@ public class JOGL implements IGL, IGLTextureProvider {
 		+	"varying vec2 v_texcoord;\n"
 		+	"void main (void) {\n"
 		+	"	vec4 color = texture2D(t_reflectance, v_texcoord);\n"
-		+	"	gl_FragColor = color * v_material + v_material_emission;\n"
+		+	"	vec4 tmp_color = color * v_material + v_material_emission;\n"
+		+	"	for (int i = 0; i < 4; i++) if (tmp_color[i] > 1.0f) tmp_color[i] = 1.0f;\n"
+		+	"	gl_FragColor = tmp_color;\n"
 		+	"}";
 
 	int mVertexHandle, mNormalHandle, mTexcoordHandle;
@@ -306,7 +312,8 @@ public class JOGL implements IGL, IGLTextureProvider {
 		if (mMVPMatrixHandle != -1)
 			gl.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvp_matrix, 0);
 		if (mEcLightDirHandle != -1)
-			gl.glUniform3f(mEcLightDirHandle, 0f, 0f, -1f);
+			gl.glUniform3f(mEcLightDirHandle, 0f, 1f, -1f);
+			//gl.glUniform3f(mEcLightDirHandle, 0f, 0f, -1f);
 
 		float[] normal_matrix = new float[9];
 		for (int i = 0; i < 3; i++)

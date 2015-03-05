@@ -67,7 +67,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	//boolean loading;
 
 	ArrayList<ModelInfo> model_list = new ArrayList<ModelInfo>();
-	final float frame_rate = 30;
+	final float frame_rate = 50;
 	
 	@Override
 	public void create () {
