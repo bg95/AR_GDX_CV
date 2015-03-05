@@ -2,9 +2,13 @@ package com.mygdx.game;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
+
 import net.yzwlab.javammd.GLTexture;
 import net.yzwlab.javammd.IGLTextureProvider;
 import net.yzwlab.javammd.ReadException;
@@ -571,47 +575,13 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		Gdx.gl.glDepthFunc(GL20.GL_LEQUAL);
 		Gdx.gl.glDepthMask(true);
 		Gdx.gl.glClear(GL20.GL_DEPTH_BUFFER_BIT);
-		// Position the eye behind the origin.
-	    final float eyeX = 0.0f;
-	    final float eyeY = 10.0f;
-	    final float eyeZ = 80.0f;
-	 
-	    // We are looking toward the distance
-	    final float lookX = 0.0f;
-	    final float lookY = 10.0f;
-	    final float lookZ = 0.0f;
-	 
-	    // Set our up vector. This is where our head would be pointing were we holding the camera.
-	    final float upX = 0.0f;
-	    final float upY = 1.0f;
-	    final float upZ = 0.0f;
-	 
-	    float[] mViewMatrix = new float[16];
-		// Set the view matrix. This matrix can be said to represent the camera position.
-	    // NOTE: In OpenGL 1, a ModelView matrix is used, which is a combination of a model and
-	    // view matrix. In OpenGL 2, we can keep track of these matrices separately if we choose.
-	    Matrix.setLookAtM(mViewMatrix , 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ);
-	    
-	    final float ratio = (float) 640 / 480;
-	    final float left = -ratio;
-	    final float right = ratio;
-	    final float bottom = -1.0f;
-	    final float top = 1.0f;
-	    final float near = 5.0f;
-	    final float far = 100.0f;
-	 
-	    float[] mProjectionMatrix = new float[16];
-		Matrix.frustumM(mProjectionMatrix, 0, left, right, bottom, top, near, far);
-
-        float[] mvp_matrix = new float[16];
-		Matrix.multiplyMM(mvp_matrix , 0, mProjectionMatrix, 0, mViewMatrix, 0);
 		
 		jogl.glPushMatrix();
 	    //jogl.setMatrix(mvp_matrix);
 		cam.up.set(0, 1, 0);
-		cam.position.set(0f, 10.0f, 80.0f);
+		cam.position.set(0f, 10.0f, 40.0f);
 		cam.lookAt(0, 10, 0);
-		cam.near = 5f;
+		cam.near = 10f;
 		cam.far = 100f;
 		cam.update();
 		jogl.setCamera(cam);
