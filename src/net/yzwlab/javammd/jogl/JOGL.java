@@ -145,7 +145,7 @@ public class JOGL implements IGL, IGLTextureProvider {
 		if (pos > 0) {
 			sfilename = sfilename.substring(0, pos);
 		}
-		File f = new File(baseDir, sfilename);
+		File f = new File(getBaseDir(), sfilename);
 		try {
 			TargaReader reader = new TargaReader();
 			BufferedImage image = null;
@@ -644,8 +644,16 @@ public class JOGL implements IGL, IGLTextureProvider {
 			mvp_matrix[i] = m[i];
 	}
 	
+	public float[] getMatrix() {
+		return mvp_matrix.clone();
+	}
+	
 	public void setCamera(Camera c) {
 		setMatrix(c.combined.getValues());
+	}
+
+	public File getBaseDir() {
+		return baseDir;
 	}
 
 }

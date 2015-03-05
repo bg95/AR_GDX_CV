@@ -2,9 +2,6 @@ package com.mygdx.game;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
@@ -31,19 +28,9 @@ import org.opencv.imgproc.Imgproc;
 
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.assets.AssetManager;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
-import com.badlogic.gdx.graphics.VertexAttributes.Usage;
-import com.badlogic.gdx.graphics.g3d.Environment;
-import com.badlogic.gdx.graphics.g3d.Material;
-import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
-import com.badlogic.gdx.graphics.g3d.ModelInstance;
-import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
-import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
-import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Matrix4;
@@ -61,6 +48,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	public ModelInstance[] boxes_instance;
 	public Environment environment;
 */
+	
 	static final ModelBuilder model_builder = new ModelBuilder();
 	final File calib_file = new File("camera.dat");
 	//final String model_filename = "models/more/textures/Miku_1_4.g3db";
@@ -74,17 +62,27 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	//double m_z_scale = -1.0;
 	MatOfPoint2f prev_c = new MatOfPoint2f(new Mat(4, 2, CvType.CV_32FC1));
 	Mat webcam, gray, binary, undist_webcam;
-	AssetManager assets = new AssetManager();
+	//AssetManager assets = new AssetManager();
 
 	//AssetManager assets = new AssetManager();
 	//boolean loading;
 	class ModelInfo
 	{
-		public ModelInfo(String file_name, MatOfPoint2f c) {
-			loading = true;
-			assets.load(file_name, Model.class);
-			name = file_name;
-			model = null;
+		public ModelInfo(File pmd, File vmd, MatOfPoint2f c, JOGL _jogl) throws ReadException, IOException {
+			jogl = _jogl;
+			assert pmd.getParentFile().equals(jogl.getBaseDir());
+			//loading = true;
+			//assets.load(file_name, Model.class);
+			/*
+			this.pmd = pmd;
+			this.vmd = vmd;
+			pmd_name = pmd.getName();
+			vmd_name = vmd.getName();
+			*/
+			model = new MMDModel();
+			model.openPMD(new FileBuffer(pmd));
+			model.openVMD(new FileBuffer(vmd));
+			model.prepare(jogl, MyGdxGame.this);
 			quad = c;
 			double b = Math.random();
 			double g = Math.random();
@@ -92,6 +90,20 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 			double v = Math.max(Math.max(r, g), b) / 255.0;
 			color = new Scalar(b / v, g / v, r / v);
 		}
+		
+		public ModelInfo(MMDModel model, MatOfPoint2f c, JOGL _jogl) {
+			jogl = _jogl;
+			//loading = true;
+			this.model = model;
+			quad = c;
+			double b = Math.random();
+			double g = Math.random();
+			double r = Math.random();
+			double v = Math.max(Math.max(r, g), b) / 255.0;
+			color = new Scalar(b / v, g / v, r / v);
+		}
+		
+		/*
 		public boolean checkLoaded() {
 			if (loading && assets.update())
 			{
@@ -104,13 +116,16 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 				return true;
 			}
 			return !loading;
-		}
+		}*/
 		public MatOfPoint2f quad;
 		//AssetManager asset;
-		String name;
-		Model model;
-		boolean loading;
+		//File pmd, vmd;
+		//String pmd_name, vmd_name;
+		//Model model;
+		MMDModel model;
+		//boolean loading;
 		Scalar color;
+		JOGL jogl;
 	};
 	ArrayList<ModelInfo> model_list = new ArrayList<ModelInfo>();
 	
@@ -153,13 +168,13 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 
 		//System.out.print("Render start\n");
 		//System.out.print(System.currentTimeMillis() + "\n");
-		
+		/*
 		for (ModelInfo i : model_list)
 			if (i.checkLoaded())
 			{
 				//box_model = i.model;
 			}
-		
+		*/
 		if (!vc.grab())
 			System.out.print("unable to grab capture\n");
 		if (!vc.retrieve(webcam))
@@ -207,7 +222,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 
 		//System.out.print("Input finished\n");
 		//System.out.print(System.currentTimeMillis() + "\n");
-		ArrayList<ModelInstance> instances_list = new ArrayList<ModelInstance>();
+		ArrayList<MMDModelInstance> instances_list = new ArrayList<MMDModelInstance>();
 		if (calib.isCalibrated()) //contours
 		{
 			List<MatOfPoint> contours_3 = new ArrayList<MatOfPoint>();
@@ -254,11 +269,22 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 				//System.out.print("For quadrilateral " + i + "\n");
 				//System.out.print(System.currentTimeMillis() + "\n");
 				
-				ModelInfo model_info;
+				ModelInfo model_info = null;
 				if (matching[i] == -1) //new quad
 				{
-					model_info = new ModelInfo(model_filename, c);
-					model_list.add(model_info);
+					try {
+						//if (model_list.size() == 0)
+						model_info = new ModelInfo(pmd_dir, vmd_dir, c, jogl);
+					} catch (IOException e) {
+						System.out.println("new ModelInfo IOException");
+						e.printStackTrace();
+					} catch (ReadException e) {
+						System.out.println("new ModelInfo ReadException");
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					if (model_info != null)
+						model_list.add(model_info);
 					
 					if (model_list.size() > MAX_MODELS)
 					{
@@ -274,7 +300,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 					//System.out.print("Old quad " + i + "," + matching[i] + "\n");
 				}
 				i++;
-				if (model_info.checkLoaded())
+				//if (model_info.checkLoaded())
 				{
 					Matrix4 transform = correctSolvePnP(object_corners, c,
 							intrinsics, distortion, cam.fieldOfView, webcam.rows());
@@ -283,12 +309,13 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 					//instances_list.add(new ModelInstance(coord_model[0], transform.cpy()));
 					//instances_list.add(new ModelInstance(coord_model[1], transform.cpy()));
 					//instances_list.add(new ModelInstance(coord_model[2], transform.cpy()));
-					instances_list.add(new ModelInstance(model_info.model, ttransl.mulLeft(transform.cpy())));
+					if (model_info != null)
+						instances_list.add(new MMDModelInstance(model_info.model, ttransl.mulLeft(transform.cpy())));
 				}
 				List<MatOfPoint> tmp = new ArrayList<MatOfPoint>();
 				tmp.add(new MatOfPoint(c.toArray()));
-				Imgproc.drawContours(undist_webcam, tmp, -1, model_info.color);
-				
+				if (model_info != null)
+					Imgproc.drawContours(undist_webcam, tmp, -1, model_info.color);
 
 				//unwarp
 				Mat unwarp_webcam = new Mat(400, 400, webcam.type());
@@ -313,19 +340,31 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		//UtilAR.imDrawBackground(undist_webcam);
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 	    Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 0.5f);
-	    Gdx.gl.glClear(Gdx.gl.GL_COLOR_BUFFER_BIT);
+	    Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		//new TestDrawer(Gdx.gl, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());//.onDrawFrame();
+
+		Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
+		Gdx.gl.glDepthFunc(GL20.GL_LEQUAL);
+		Gdx.gl.glDepthMask(true);
+		Gdx.gl.glClear(GL20.GL_DEPTH_BUFFER_BIT);
 		
-	    /*
+		cam.up.set(0, 1, 0);
+		cam.position.set(0f, 10.0f, 40.0f);
+		cam.lookAt(0, 10, 0);
+		cam.near = 10f;
+		cam.far = 100f;
+		cam.update();
+		
+		jogl.glPushMatrix();
+		jogl.setCamera(cam);
 		if (calib.isCalibrated())
 		{
-	        model_batch.begin(cam);
-	        for (ModelInstance m : instances_list)
-	        	model_batch.render(m, environment);
-	        model_batch.end();
+	        for (MMDModelInstance m : instances_list)
+	        	m.draw(jogl);
 	    }
-	    */
-		testDraw();
+		jogl.glPopMatrix();
+	    
+		//testDraw();
 		//System.out.print("Render end\n");
 		//System.out.print(System.currentTimeMillis() + "\n");
 	}
@@ -496,7 +535,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 			j = 0;
 			for (MatOfPoint2f q : dst)
 			{
-				w[i][j] = quad_match_offset -distPoly(p, q);
+				w[i][j] = quad_match_offset - distPoly(p, q);
 				j++;
 			}
 			i++;
@@ -523,7 +562,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		if (cnt_mat != 0)
 		{
 			avg_dist /= cnt_mat;
-			//quad_match_thres += (avg_dist * 3.0 - quad_match_thres) * 0.1;
+			quad_match_thres += (avg_dist * 3.0 - quad_match_thres) * 0.1;
 		}
 	}
 
@@ -532,6 +571,8 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	File pmd_dir = new File("mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd");
 	//File pmd_dir = new File("mmd/Models/saberlily/saberlily1.pmd");
 	File vmd_dir = new File("mmd/VMD/aoitori.vmd");
+	File pmd_filename = new File(pmd_dir.getName());
+	File vmd_filename = new File(vmd_dir.getName());
 	boolean loaded = false;
 	JOGL jogl;
 	MMDModel mmd_model;
@@ -539,6 +580,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		
 		//new TestDrawer(Gdx.gl30, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());		
 		jogl = new JOGL(pmd_dir.getParentFile(), Gdx.gl);
+		/*
 		mmd_model = new MMDModel();
 		try {
 			System.out.println("Start loading pmd");
@@ -548,7 +590,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		} catch (ReadException | IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		}*/
 		/*
 		for (int j = 0; j < mmd_model.getFaceCount(); j++) {
 			System.out.println("Face #" + String.valueOf(j + 1) + ": "
@@ -559,6 +601,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 					+ new String(mmd_model.getBone(j).getName()));
 		}
 		*/
+		/*
 		if (loaded == false) {
 			try {
 				mmd_model.prepare(jogl, this);
@@ -567,6 +610,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 			}
 			loaded = true;
 		}
+		*/
 	}
 	
 	void testDraw() {		
@@ -575,7 +619,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		Gdx.gl.glDepthFunc(GL20.GL_LEQUAL);
 		Gdx.gl.glDepthMask(true);
 		Gdx.gl.glClear(GL20.GL_DEPTH_BUFFER_BIT);
-		
+		/*
 		jogl.glPushMatrix();
 	    //jogl.setMatrix(mvp_matrix);
 		cam.up.set(0, 1, 0);
@@ -588,6 +632,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	    mmd_model.update((float) (System.currentTimeMillis() / 30.0 % 1000.0));
 		mmd_model.draw(jogl);
 		jogl.glPopMatrix();
+		*/
 	}
 
 	//IGLTextureProvider.Handler
