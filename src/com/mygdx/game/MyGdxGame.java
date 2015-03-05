@@ -67,6 +67,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	//boolean loading;
 
 	ArrayList<ModelInfo> model_list = new ArrayList<ModelInfo>();
+	final float frame_rate = 30;
 	
 	@Override
 	public void create () {
@@ -208,7 +209,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 							intrinsics, distortion, cam.fieldOfView, webcam.rows());
 					Matrix4 ttransl = new Matrix4();
 					if (model_info != null)
-						instances_list.add(new MMDModelInstance(model_info.model, transform));
+						instances_list.add(new MMDModelInstance(model_info.model, transform, model_info.updateFrameNo(frame_rate)));
 				}
 				List<MatOfPoint> tmp = new ArrayList<MatOfPoint>();
 				tmp.add(new MatOfPoint(c.toArray()));

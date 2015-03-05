@@ -36,6 +36,7 @@ class ModelInfo
 		double v = Math.max(Math.max(r, g), b) / 255.0;
 		color = new Scalar(b / v, g / v, r / v);
 		frameno = 0;
+		time = System.currentTimeMillis();
 	}
 	
 	public ModelInfo(MMDModel model, MatOfPoint2f c, JOGL _jogl) {
@@ -49,6 +50,15 @@ class ModelInfo
 		double v = Math.max(Math.max(r, g), b) / 255.0;
 		color = new Scalar(b / v, g / v, r / v);
 		frameno = 0;
+		time = System.currentTimeMillis();
+	}
+	
+	public int updateFrameNo(float framerate) {
+		long ct = System.currentTimeMillis();
+		long dt = ct - time;
+		frameno += (int) (dt * framerate / 1000.0f);
+		time = ct;
+		return frameno;
 	}
 	
 	/*
@@ -75,4 +85,5 @@ class ModelInfo
 	Scalar color;
 	JOGL jogl;
 	int frameno;
+	long time;
 };
