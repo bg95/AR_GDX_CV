@@ -239,6 +239,10 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 	    Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 0.5f);
 	    Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+	    Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MAG_FILTER,
+				GL20.GL_LINEAR);
+	    Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MIN_FILTER,
+				GL20.GL_LINEAR);
 		UtilAR.imDrawBackground(undist_webcam);
 		
 		jogl.setCurrentProgram();

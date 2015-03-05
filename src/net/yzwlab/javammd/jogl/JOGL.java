@@ -208,11 +208,27 @@ public class JOGL implements IGL, IGLTextureProvider {
 			gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MAG_FILTER,
 					GL20.GL_LINEAR);
 			gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MIN_FILTER,
-					GL20.GL_LINEAR);
+					GL20.GL_LINEAR_MIPMAP_NEAREST);//GL20.GL_LINEAR);
 			imageBuffer.position(0);
+			
 			gl.glTexImage2D(GL20.GL_TEXTURE_2D, 0, GL30.GL_RGBA8,//GL20.GL_UNSIGNED_INT, //used to be GL_RGBA8
 					ret.getTexWidth(), ret.getTexHeight(), 0, GL20.GL_RGBA,
 					GL20.GL_UNSIGNED_BYTE, imageBuffer);
+			gl.glGenerateMipmap(GL20.GL_TEXTURE_2D);
+			/*
+			int mipwidth = ret.getTexWidth(), mipheight = ret.getTexHeight();
+			int level = 0;
+			while (mipwidth >= 1 && mipheight >= 1)
+			{
+				imageBuffer.position(0);
+				gl.glTexImage2D(GL20.GL_TEXTURE_2D, level, GL30.GL_RGBA8,//GL20.GL_UNSIGNED_INT, //used to be GL_RGBA8
+						mipwidth, mipheight, 0, GL20.GL_RGBA,
+						GL20.GL_UNSIGNED_BYTE, imageBuffer);
+				level++;
+				mipwidth /= 2;
+				mipheight /= 2;
+			}
+			*/
 			gl.glBindTexture(GL20.GL_TEXTURE_2D, 0); // �f�t�H���g�e�N�X�`���̊��蓖��
 			ret.setTextureIds(new long[] { textureId });
 
