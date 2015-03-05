@@ -1,31 +1,18 @@
 package com.mygdx.game;
 
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
-import java.nio.ShortBuffer;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Timer;
-import java.util.TimerTask;
-
 import net.yzwlab.javammd.GLTexture;
 import net.yzwlab.javammd.IGLTextureProvider;
-import net.yzwlab.javammd.IGLTextureProvider.Handler;
 import net.yzwlab.javammd.ReadException;
 import net.yzwlab.javammd.jogl.JOGL;
 import net.yzwlab.javammd.jogl.io.FileBuffer;
 import net.yzwlab.javammd.model.MMDModel;
 
 import org.opencv.calib3d.Calib3d;
-import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
@@ -35,22 +22,16 @@ import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
 import org.opencv.core.Scalar;
-import org.opencv.core.Size;
-import org.opencv.core.TermCriteria;
 import org.opencv.highgui.VideoCapture;
 import org.opencv.imgproc.Imgproc;
 
-import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetManager;
-import com.badlogic.gdx.assets.loaders.ModelLoader;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
@@ -59,18 +40,15 @@ import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
-import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
-import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Matrix4;
-import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.math.collision.BoundingBox;
 
 public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handler {
 	public PerspectiveCamera cam;
 	public CameraInputController cam_control;
 	public ModelBatch model_batch;
+	/*
 	public Model model;
 	public Model[] coord_model;
 	public ModelInstance instance;
@@ -78,7 +56,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	public Model box_model;
 	public ModelInstance[] boxes_instance;
 	public Environment environment;
-
+*/
 	static final ModelBuilder model_builder = new ModelBuilder();
 	final File calib_file = new File("camera.dat");
 	//final String model_filename = "models/more/textures/Miku_1_4.g3db";
@@ -141,42 +119,12 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		cam.near = 0.1f;
 		cam.far = 2000f;
 		cam.update();
+		
 		//cam_control = new CameraInputController(cam);
 		Gdx.input.setInputProcessor(cam_control);
 		
 		model_batch = new ModelBatch();
-		ModelBuilder builder = new ModelBuilder();
-		model = builder.createBox(3f, 3f, 3f,
-				new Material(ColorAttribute.createDiffuse(Color.GREEN)),
-				Usage.Position | Usage.Normal);
-		coord_model = new Model[3];
-		coord_model[0] = builder.createArrow(0f, 0f, 0f, 1f, 0f, 0f,
-				0.2f, 0.1f, 15, GL20.GL_TRIANGLES,
-				new Material(ColorAttribute.createDiffuse(Color.RED)),
-				Usage.Position | Usage.Normal);
-		coord_model[1] = builder.createArrow(0f, 0f, 0f, 0f, 1f, 0f,
-				0.2f, 0.1f, 15, GL20.GL_TRIANGLES,
-				new Material(ColorAttribute.createDiffuse(Color.GREEN)),
-				Usage.Position | Usage.Normal);
-		coord_model[2] = builder.createArrow(0f, 0f, 0f, 0f, 0f, 1f,
-				0.2f, 0.1f, 15, GL20.GL_TRIANGLES,
-				new Material(ColorAttribute.createDiffuse(Color.BLUE)),
-				Usage.Position | Usage.Normal);
-		instance = new ModelInstance(model, 1f, 0.5f, 0.75f);
-		coord_instance = new ModelInstance[3];
-
-		box_model = builder.createBox(1f, 1f, 1f,
-				//new Material(ColorAttribute.createDiffuse(new Color(0.0f, 0.0f, 1.0f, 0.3f))),
-				new Material(new BlendingAttribute(0.3f)),
-				Usage.Position | Usage.Normal);
-		//model_list.add(new ModelInfo(model_filename));
-		//assets.load(model_filename, Model.class);
-		//loading = true;
 		
-		environment = new Environment();
-        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
-        environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
-
         vc = new VideoCapture(0);
         //vc.open(0);
         if (!vc.isOpened())
@@ -205,7 +153,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		for (ModelInfo i : model_list)
 			if (i.checkLoaded())
 			{
-				box_model = i.model;
+				//box_model = i.model;
 			}
 		
 		if (!vc.grab())
@@ -328,9 +276,9 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 							intrinsics, distortion, cam.fieldOfView, webcam.rows());
 					Matrix4 ttransl = new Matrix4();
 					ttransl.translate(0.5f, 0.5f, -0.5f);
-					instances_list.add(new ModelInstance(coord_model[0], transform.cpy()));
-					instances_list.add(new ModelInstance(coord_model[1], transform.cpy()));
-					instances_list.add(new ModelInstance(coord_model[2], transform.cpy()));
+					//instances_list.add(new ModelInstance(coord_model[0], transform.cpy()));
+					//instances_list.add(new ModelInstance(coord_model[1], transform.cpy()));
+					//instances_list.add(new ModelInstance(coord_model[2], transform.cpy()));
 					instances_list.add(new ModelInstance(model_info.model, ttransl.mulLeft(transform.cpy())));
 				}
 				List<MatOfPoint> tmp = new ArrayList<MatOfPoint>();
@@ -399,7 +347,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 
 	@Override
 	public void dispose() {
-		model.dispose();
+		//model.dispose();
 		vc.release();
 	}
 	
@@ -659,7 +607,14 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		Matrix.multiplyMM(mvp_matrix , 0, mProjectionMatrix, 0, mViewMatrix, 0);
 		
 		jogl.glPushMatrix();
-	    jogl.setMatrix(mvp_matrix);
+	    //jogl.setMatrix(mvp_matrix);
+		cam.up.set(0, 1, 0);
+		cam.position.set(0f, 10.0f, 80.0f);
+		cam.lookAt(0, 10, 0);
+		cam.near = 5f;
+		cam.far = 100f;
+		cam.update();
+		jogl.setCamera(cam);
 	    mmd_model.update((float) (System.currentTimeMillis() / 30.0 % 1000.0));
 		mmd_model.draw(jogl);
 		jogl.glPopMatrix();

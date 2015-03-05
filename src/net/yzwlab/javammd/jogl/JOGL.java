@@ -29,7 +29,9 @@ import javax.imageio.ImageIO;
 
 
 
+
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
 import com.mygdx.game.Matrix;
@@ -640,6 +642,10 @@ public class JOGL implements IGL, IGLTextureProvider {
 	public void setMatrix(float[] m) {
 		for (int i = 0; i < 16; i++)
 			mvp_matrix[i] = m[i];
+	}
+	
+	public void setCamera(Camera c) {
+		setMatrix(c.combined.getValues());
 	}
 
 }
