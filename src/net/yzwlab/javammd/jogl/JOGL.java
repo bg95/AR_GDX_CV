@@ -638,6 +638,10 @@ public class JOGL implements IGL, IGLTextureProvider {
 	    // Tell OpenGL to use this program when rendering.
 	    gl.glUseProgram(programHandle);
 	}
+	
+	public void setCurrentProgram() {
+	    gl.glUseProgram(programHandle);
+	}
 
 	public void setMatrix(float[] m) {
 		for (int i = 0; i < 16; i++)

@@ -39,21 +39,23 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	public PerspectiveCamera cam;
 	public CameraInputController cam_control;
 	public ModelBatch model_batch;
-	/*
-	public Model model;
-	public Model[] coord_model;
-	public ModelInstance instance;
-	public ModelInstance[] coord_instance;
-	public Model box_model;
-	public ModelInstance[] boxes_instance;
-	public Environment environment;
-*/
+
+	//File pmd_dir = new File("mmd/Models/Tda Hagane Miku APPEND/Hagane APPEND V2/Tda Hagane Miku.pmx");
+	//File pmd_dir = new File("mmd/Models/Tda2698489/Tda®¹~NEAyh_Ver1.00(nCq[üÏ).pmx");
+	File pmd_dir = new File("mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd");
+	//File pmd_dir = new File("mmd/Models/saberlily/saberlily1.pmd");
+	File vmd_dir = new File("mmd/VMD/aoitori.vmd");
+	File pmd_filename = new File(pmd_dir.getName());
+	File vmd_filename = new File(vmd_dir.getName());
+	boolean loaded = false;
+	JOGL jogl;
+	MMDModel mmd_model;
 	
 	static final ModelBuilder model_builder = new ModelBuilder();
 	final File calib_file = new File("camera.dat");
 	//final String model_filename = "models/more/textures/Miku_1_4.g3db";
 	//final String model_filename = "models/more/EnoshimaJunko/TEX/junko.g3db";
-	final String model_filename = "models/BRS/BRSDigitrevx/BRS.g3db";
+	//final String model_filename = "models/BRS/BRSDigitrevx/BRS.g3db";
 	final int MAX_MODELS = 15;
 	
 	Timer timer;
@@ -126,6 +128,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		//boolean loading;
 		Scalar color;
 		JOGL jogl;
+		int frameno;
 	};
 	ArrayList<ModelInfo> model_list = new ArrayList<ModelInfo>();
 	
@@ -160,7 +163,8 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		undist_webcam = new Mat();
 		calib.load(calib_file);
 		
-		testInit();
+		//testInit();
+		initModel();
 	}
 
 	@Override
@@ -168,13 +172,6 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 
 		//System.out.print("Render start\n");
 		//System.out.print(System.currentTimeMillis() + "\n");
-		/*
-		for (ModelInfo i : model_list)
-			if (i.checkLoaded())
-			{
-				//box_model = i.model;
-			}
-		*/
 		if (!vc.grab())
 			System.out.print("unable to grab capture\n");
 		if (!vc.retrieve(webcam))
@@ -209,11 +206,6 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 				Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 101, 30);
 		//UtilAR.imShow("gray", gray);
 		//UtilAR.imShow("binary", binary);
-		/*
-		Mat canny = new Mat();
-		Imgproc.Canny(webcam, canny, 80, 220);
-		UtilAR.imShow("canny", canny);
-		*/
 		
 		Mat intrinsics;
 		MatOfDouble distortion;
@@ -272,20 +264,10 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 				ModelInfo model_info = null;
 				if (matching[i] == -1) //new quad
 				{
-					try {
-						//if (model_list.size() == 0)
-						model_info = new ModelInfo(pmd_dir, vmd_dir, c, jogl);
-					} catch (IOException e) {
-						System.out.println("new ModelInfo IOException");
-						e.printStackTrace();
-					} catch (ReadException e) {
-						System.out.println("new ModelInfo ReadException");
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+					//if (model_list.size() == 0)
+					model_info = new ModelInfo(mmd_model, c, jogl);
 					if (model_info != null)
 						model_list.add(model_info);
-					
 					if (model_list.size() > MAX_MODELS)
 					{
 						//model_list.remove(0);
@@ -305,12 +287,12 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 					Matrix4 transform = correctSolvePnP(object_corners, c,
 							intrinsics, distortion, cam.fieldOfView, webcam.rows());
 					Matrix4 ttransl = new Matrix4();
-					ttransl.translate(0.5f, 0.5f, -0.5f);
+					//ttransl.translate(0.5f, 0.5f, -0.5f);
 					//instances_list.add(new ModelInstance(coord_model[0], transform.cpy()));
 					//instances_list.add(new ModelInstance(coord_model[1], transform.cpy()));
 					//instances_list.add(new ModelInstance(coord_model[2], transform.cpy()));
 					if (model_info != null)
-						instances_list.add(new MMDModelInstance(model_info.model, ttransl.mulLeft(transform.cpy())));
+						instances_list.add(new MMDModelInstance(model_info.model, transform));
 				}
 				List<MatOfPoint> tmp = new ArrayList<MatOfPoint>();
 				tmp.add(new MatOfPoint(c.toArray()));
@@ -337,22 +319,27 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 
 		}
 
-		//UtilAR.imDrawBackground(undist_webcam);
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 	    Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 0.5f);
 	    Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		//new TestDrawer(Gdx.gl, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());//.onDrawFrame();
 
+		Gdx.gl.glClear(GL20.GL_DEPTH_BUFFER_BIT);
+		UtilAR.imDrawBackground(undist_webcam);
+		
+		jogl.setCurrentProgram();
+		
 		Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
 		Gdx.gl.glDepthFunc(GL20.GL_LEQUAL);
 		Gdx.gl.glDepthMask(true);
+		Gdx.gl.glClearDepthf(1.0f / 0.0f);
 		Gdx.gl.glClear(GL20.GL_DEPTH_BUFFER_BIT);
 		
-		cam.up.set(0, 1, 0);
-		cam.position.set(0f, 10.0f, 40.0f);
-		cam.lookAt(0, 10, 0);
-		cam.near = 10f;
-		cam.far = 100f;
+		cam.up.set(0, -1, 0);
+		cam.position.set(0f, 0f, 0f);
+		cam.lookAt(0, 0, 1);
+		cam.near = 0.1f;
+		cam.far = 2000f;
 		cam.update();
 		
 		jogl.glPushMatrix();
@@ -524,7 +511,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
 	}
 	
-	double quad_match_thres = 1E3;
+	double quad_match_thres = 1E4;
 	double quad_match_offset = 2E6 * 4;
 	void matchQuads(List<MatOfPoint2f> src, List<MatOfPoint2f> dst, int[] matching, int[] matching_inv) {
 		double[][] w = new double[src.size()][dst.size()];
@@ -566,21 +553,10 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		}
 	}
 
-	//File pmd_dir = new File("mmd/Models/Tda Hagane Miku APPEND/Hagane APPEND V2/Tda Hagane Miku.pmx");
-	//File pmd_dir = new File("mmd/Models/Tda2698489/Tda®¹~NEAyh_Ver1.00(nCq[üÏ).pmx");
-	File pmd_dir = new File("mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd");
-	//File pmd_dir = new File("mmd/Models/saberlily/saberlily1.pmd");
-	File vmd_dir = new File("mmd/VMD/aoitori.vmd");
-	File pmd_filename = new File(pmd_dir.getName());
-	File vmd_filename = new File(vmd_dir.getName());
-	boolean loaded = false;
-	JOGL jogl;
-	MMDModel mmd_model;
-	void testInit() {
-		
+	void initModel() {
 		//new TestDrawer(Gdx.gl30, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());		
 		jogl = new JOGL(pmd_dir.getParentFile(), Gdx.gl);
-		/*
+
 		mmd_model = new MMDModel();
 		try {
 			System.out.println("Start loading pmd");
@@ -590,18 +566,8 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		} catch (ReadException | IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}*/
-		/*
-		for (int j = 0; j < mmd_model.getFaceCount(); j++) {
-			System.out.println("Face #" + String.valueOf(j + 1) + ": "
-					+ mmd_model.getFaceName(j));
 		}
-		for (int j = 0; j < mmd_model.getBoneCount(); j++) {
-			System.out.println("Bone #" + String.valueOf(j + 1) + ": "
-					+ new String(mmd_model.getBone(j).getName()));
-		}
-		*/
-		/*
+		
 		if (loaded == false) {
 			try {
 				mmd_model.prepare(jogl, this);
@@ -610,29 +576,6 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 			}
 			loaded = true;
 		}
-		*/
-	}
-	
-	void testDraw() {		
-		//System.out.println("Drawing model...");
-		Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
-		Gdx.gl.glDepthFunc(GL20.GL_LEQUAL);
-		Gdx.gl.glDepthMask(true);
-		Gdx.gl.glClear(GL20.GL_DEPTH_BUFFER_BIT);
-		/*
-		jogl.glPushMatrix();
-	    //jogl.setMatrix(mvp_matrix);
-		cam.up.set(0, 1, 0);
-		cam.position.set(0f, 10.0f, 40.0f);
-		cam.lookAt(0, 10, 0);
-		cam.near = 10f;
-		cam.far = 100f;
-		cam.update();
-		jogl.setCamera(cam);
-	    mmd_model.update((float) (System.currentTimeMillis() / 30.0 % 1000.0));
-		mmd_model.draw(jogl);
-		jogl.glPopMatrix();
-		*/
 	}
 
 	//IGLTextureProvider.Handler
