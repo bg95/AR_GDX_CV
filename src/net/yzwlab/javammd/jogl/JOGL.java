@@ -78,7 +78,8 @@ public class JOGL implements IGL, IGLTextureProvider {
 		+	"	// emit diffuse scale factor, texcoord, and position\n"
 		+	"	float v_diffuse = max(dot(ec_light_dir, ec_normal), 0.0);\n"
 		+	"	float v_specular = pow(abs(dot(ec_light_dir, ec_normal)), m_shininess);\n"
-		+	"	v_material = vec4(v_diffuse + v_specular) + m_ambiant; //emitted\n"
+		+	"	v_material = vec4(vec3(v_diffuse + v_specular), 0.5) +"
+		+ 	"			vec4(m_ambiant[3] * vec3(m_ambiant[0], m_ambiant[1], m_ambiant[2]), 0.5); //emitted\n"
 		+	"	v_material_emission = m_emission; //emitted\n"
 		+	"	v_texcoord = a_texcoord;\n"
 		+	"	gl_Position = mvp_matrix * a_vertex;\n"
@@ -246,7 +247,7 @@ public class JOGL implements IGL, IGLTextureProvider {
 			throw new IllegalArgumentException();
 		}
 		//gl.glBegin(imode);
-		System.out.println("glBegin");
+		//System.out.println("glBegin");
 		vertex_attrib_list.clear();
 		vtx_cnt = nrm_cnt = tex_cnt = 0;
 	}
@@ -254,7 +255,7 @@ public class JOGL implements IGL, IGLTextureProvider {
 	@Override
 	public void glEnd() {
 		//gl.glEnd();
-		System.out.println("glEnd");
+		//System.out.println("glEnd");
 		if (imode != GL20.GL_TRIANGLES)
 			throw new IllegalArgumentException();
 		//TODO:
@@ -455,22 +456,22 @@ public class JOGL implements IGL, IGLTextureProvider {
 		int ic2 = 0;
 		if (c2 == C.GL_AMBIENT) {
 			//ic2 = GL20.GL_AMBIENT;
-			System.out.println("set ambiant " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
+			//System.out.println("set ambiant " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
 			if (mAmbiantHandle != -1)
 				gl.glUniform4fv(mAmbiantHandle, 4, fv, 0);
 		} else if (c2 == C.GL_DIFFUSE) {
 			//ic2 = GL20.GL_DIFFUSE;
-			System.out.println("set diffuse " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
+			//System.out.println("set diffuse " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
 			if (mDiffuseHandle != -1)
 				gl.glUniform4fv(mDiffuseHandle, 4, fv, 0);
 		} else if (c2 == C.GL_EMISSION) {
 			//ic2 = GL20.GL_EMISSION;
-			System.out.println("set emission " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
+			//System.out.println("set emission " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
 			if (mEmissionHandle != -1)
 				gl.glUniform4fv(mEmissionHandle, 4, fv, 0);
 		} else if (c2 == C.GL_SPECULAR) {
 			//ic2 = GL20.GL_SPECULAR;
-			System.out.println("set specular " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
+			//System.out.println("set specular " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
 			if (mSpecularHandle != -1)
 				gl.glUniform4fv(mSpecularHandle, 4, fv, 0);
 		} else {
@@ -491,7 +492,7 @@ public class JOGL implements IGL, IGLTextureProvider {
 		int ic2 = 0;
 		if (c2 == C.GL_SHININESS) {
 			//ic2 = GL20.GL_SHININESS;
-			System.out.println("set shininess " + f);
+			//System.out.println("set shininess " + f);
 			if (mShininessHandle != -1)
 				gl.glUniform1fv(mShininessHandle, 4, new float[]{f}, 0);
 		} else {
@@ -628,9 +629,9 @@ public class JOGL implements IGL, IGLTextureProvider {
 		mEmissionHandle = gl.glGetUniformLocation(programHandle, "m_emission");
 		mShininessHandle = gl.glGetUniformLocation(programHandle, "m_shininess");
 	    
-		System.out.println("mVertexHandle = " + mVertexHandle);
-		System.out.println("mNormalHandle = " + mNormalHandle);
-		System.out.println("mTexcoordHandle = " + mTexcoordHandle);
+		//System.out.println("mVertexHandle = " + mVertexHandle);
+		//System.out.println("mNormalHandle = " + mNormalHandle);
+		//System.out.println("mTexcoordHandle = " + mTexcoordHandle);
 
 	    // Tell OpenGL to use this program when rendering.
 	    gl.glUseProgram(programHandle);
