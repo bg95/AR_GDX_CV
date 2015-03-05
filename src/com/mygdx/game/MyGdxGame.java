@@ -169,7 +169,6 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 
 	@Override
 	public void render () {
-
 		//System.out.print("Render start\n");
 		//System.out.print(System.currentTimeMillis() + "\n");
 		if (!vc.grab())
@@ -196,24 +195,16 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		}
 		else
 			Imgproc.undistort(webcam, undist_webcam, calib.getCameraMatrix(), calib.getDistortionCoefficients());
-
-		//System.out.print("Undistort completed\n");
-		//System.out.print(System.currentTimeMillis() + "\n");
 		
 		Imgproc.cvtColor(undist_webcam, gray, Imgproc.COLOR_BGR2GRAY);
-		//Imgproc.threshold(gray, binary, 80, 220, Imgproc.THRESH_BINARY);
 		Imgproc.adaptiveThreshold(gray, binary, 255,
 				Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 101, 30);
-		//UtilAR.imShow("gray", gray);
-		//UtilAR.imShow("binary", binary);
 		
 		Mat intrinsics;
 		MatOfDouble distortion;
 		intrinsics = calib.getCameraMatrix();
 		distortion = new MatOfDouble(calib.getDistortionCoefficients());
 
-		//System.out.print("Input finished\n");
-		//System.out.print(System.currentTimeMillis() + "\n");
 		ArrayList<MMDModelInstance> instances_list = new ArrayList<MMDModelInstance>();
 		if (calib.isCalibrated()) //contours
 		{
@@ -237,8 +228,6 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 					approx_curves2f.add(approxCurve);
 				}
 			}
-			//System.out.print("Find quads finished\n");
-			//System.out.print(System.currentTimeMillis() + "\n");
 			
 			List<MatOfPoint2f> quad_list = new ArrayList<MatOfPoint2f>();
 			int[] matching = new int[approx_curves2f.size()];
@@ -249,30 +238,25 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 			
 			MatOfPoint3f object_corners = new MatOfPoint3f(new Point3[]
 					{
-					new Point3(-5, 10, -3),
-					new Point3(5, 10, -3),
-					new Point3(5, 0, -3),
-					new Point3(-5, 0, -3)
+						new Point3(-5, 10, -3),
+						new Point3(5, 10, -3),
+						new Point3(5, 0, -3),
+						new Point3(-5, 0, -3)
 					});
 			instances_list.clear();
 			int i = 0;
 			for (MatOfPoint2f c : approx_curves2f)
-			{
-				//System.out.print("For quadrilateral " + i + "\n");
-				//System.out.print(System.currentTimeMillis() + "\n");
-				
+			{				
 				ModelInfo model_info = null;
 				if (matching[i] == -1) //new quad
 				{
-					//if (model_list.size() == 0)
 					model_info = new ModelInfo(mmd_model, c, jogl);
 					if (model_info != null)
 						model_list.add(model_info);
 					if (model_list.size() > MAX_MODELS)
 					{
-						//model_list.remove(0);
+						model_list.remove(0);
 					}
-					//System.out.print("New model created, currently " + model_list.size() + " models\n");
 				}
 				else //old quad, renew
 				{
@@ -287,10 +271,6 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 					Matrix4 transform = correctSolvePnP(object_corners, c,
 							intrinsics, distortion, cam.fieldOfView, webcam.rows());
 					Matrix4 ttransl = new Matrix4();
-					//ttransl.translate(0.5f, 0.5f, -0.5f);
-					//instances_list.add(new ModelInstance(coord_model[0], transform.cpy()));
-					//instances_list.add(new ModelInstance(coord_model[1], transform.cpy()));
-					//instances_list.add(new ModelInstance(coord_model[2], transform.cpy()));
 					if (model_info != null)
 						instances_list.add(new MMDModelInstance(model_info.model, transform));
 				}
@@ -322,9 +302,6 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 	    Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 0.5f);
 	    Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-		//new TestDrawer(Gdx.gl, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());//.onDrawFrame();
-
-		Gdx.gl.glClear(GL20.GL_DEPTH_BUFFER_BIT);
 		UtilAR.imDrawBackground(undist_webcam);
 		
 		jogl.setCurrentProgram();
@@ -350,10 +327,6 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	        	m.draw(jogl);
 	    }
 		jogl.glPopMatrix();
-	    
-		//testDraw();
-		//System.out.print("Render end\n");
-		//System.out.print(System.currentTimeMillis() + "\n");
 	}
 
 	@Override
@@ -366,13 +339,11 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	@Override
 	public void pause() {
 		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void resume() {
 		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
@@ -549,7 +520,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		if (cnt_mat != 0)
 		{
 			avg_dist /= cnt_mat;
-			quad_match_thres += (avg_dist * 3.0 - quad_match_thres) * 0.1;
+			//quad_match_thres += (avg_dist * 3.0 - quad_match_thres) * 0.1;
 		}
 	}
 
@@ -582,7 +553,6 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	@Override
 	public void onSuccess(byte[] filename, GLTexture desc) {
 		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
