@@ -58,18 +58,28 @@ public class JOGL implements IGL, IGLTextureProvider {
 			"uniform mat4 mvp_matrix; // model-view-projection matrix\n"
 		+	"uniform mat3 normal_matrix; // normal matrix\n"
 		+	"uniform vec3 ec_light_dir; // light direction in eye coords\n"
+		+	"uniform vec4 m_diffuse;\n"
+		+	"uniform vec4 m_ambiant;\n"
+		+	"uniform vec4 m_specular;\n"
+		+	"uniform vec4 m_emission;\n"
+		+	"uniform float m_shininess;\n"
 		+	"attribute vec4 a_vertex; // vertex position\n"
 		+	"attribute vec3 a_normal; // vertex normal\n"
 		+	"attribute vec4 a_color; // color, unused\n"
 		+	"attribute vec2 a_texcoord; // texture coordinates\n"
-		+	"varying float v_diffuse;\n"
+		+	"//varying float v_diffuse;\n"
+		+	"varying vec4 v_material;\n"
+		+	"varying vec4 v_material_emission;\n"
 		+	"varying vec2 v_texcoord;\n"
 		+	"varying vec4 v_Color;          \n"     // This will be passed into the fragment shader.
 		+	"void main() {\n"
 		+	"	// put vertex normal into eye coords\n"
 		+	"	vec3 ec_normal = normalize(normal_matrix * a_normal);\n"
 		+	"	// emit diffuse scale factor, texcoord, and position\n"
-		+	"	v_diffuse = max(dot(ec_light_dir, ec_normal), 0.0);\n"
+		+	"	float v_diffuse = max(dot(ec_light_dir, ec_normal), 0.0);\n"
+		+	"	float v_specular = pow(abs(dot(ec_light_dir, ec_normal)), m_shininess);\n"
+		+	"	v_material = vec4(v_diffuse + v_specular) + m_ambiant; //emitted\n"
+		+	"	v_material_emission = m_emission; //emitted\n"
 		+	"	v_texcoord = a_texcoord;\n"
 		+	"	gl_Position = mvp_matrix * a_vertex;\n"
 		+	"   v_Color = a_color;          \n"     // Pass the color through to the fragment shader.
@@ -80,16 +90,19 @@ public class JOGL implements IGL, IGLTextureProvider {
 		+	"uniform sampler2D t_reflectance;\n"
 		+	"uniform vec4 i_ambient;\n"
 		+	"varying float v_diffuse;\n"
+		+	"varying vec4 v_material;\n"
+		+	"varying vec4 v_material_emission;\n"
 		+	"varying vec2 v_texcoord;\n"
 		+	"void main (void) {\n"
 		+	"	vec4 color = texture2D(t_reflectance, v_texcoord);\n"
-		+	"	gl_FragColor = color * (vec4(v_diffuse) + i_ambient);\n"
+		+	"	gl_FragColor = color * v_material + v_material_emission;\n"
 		+	"}";
 
 	int mVertexHandle, mNormalHandle, mTexcoordHandle;
 	int mMVPMatrixHandle, mNormalMatrixHandle, mEcLightDirHandle;
 	int mTReflectanceHandle, mIAmbiantHandle;
-
+	int mDiffuseHandle, mAmbiantHandle, mSpecularHandle, mEmissionHandle, mShininessHandle;
+	
 	private int imode;
 	private int programHandle;
 	private ArrayList<Float> vertex_attrib_list = new ArrayList<Float>();
@@ -100,6 +113,7 @@ public class JOGL implements IGL, IGLTextureProvider {
 	
 	final int ATTRIB_SIZE = 8, FLOAT_SIZE = 4;
 	final int VTX_OFFSET = 0, NRM_OFFSET = 3, TEX_OFFSET = 6;
+
 	
 	public JOGL(File baseDir, GL20 gl) {
 		if (baseDir == null || gl == null) {
@@ -110,9 +124,6 @@ public class JOGL implements IGL, IGLTextureProvider {
 		this.gl = gl;
 		initShaders();
 		onSurfaceCreated();
-		gl.glEnable(GL20.GL_DEPTH_TEST);
-		gl.glDepthFunc(GL20.GL_LEQUAL);
-		gl.glDepthMask(true);
 	}
 
 	@Override
@@ -445,16 +456,23 @@ public class JOGL implements IGL, IGLTextureProvider {
 		if (c2 == C.GL_AMBIENT) {
 			//ic2 = GL20.GL_AMBIENT;
 			System.out.println("set ambiant " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
-			gl.glUniform4fv(mIAmbiantHandle, 4, fv, 0);
+			if (mAmbiantHandle != -1)
+				gl.glUniform4fv(mAmbiantHandle, 4, fv, 0);
 		} else if (c2 == C.GL_DIFFUSE) {
 			//ic2 = GL20.GL_DIFFUSE;
 			System.out.println("set diffuse " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
+			if (mDiffuseHandle != -1)
+				gl.glUniform4fv(mDiffuseHandle, 4, fv, 0);
 		} else if (c2 == C.GL_EMISSION) {
 			//ic2 = GL20.GL_EMISSION;
 			System.out.println("set emission " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
+			if (mEmissionHandle != -1)
+				gl.glUniform4fv(mEmissionHandle, 4, fv, 0);
 		} else if (c2 == C.GL_SPECULAR) {
 			//ic2 = GL20.GL_SPECULAR;
 			System.out.println("set specular " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
+			if (mSpecularHandle != -1)
+				gl.glUniform4fv(mSpecularHandle, 4, fv, 0);
 		} else {
 			throw new IllegalArgumentException();
 		}
@@ -474,6 +492,8 @@ public class JOGL implements IGL, IGLTextureProvider {
 		if (c2 == C.GL_SHININESS) {
 			//ic2 = GL20.GL_SHININESS;
 			System.out.println("set shininess " + f);
+			if (mShininessHandle != -1)
+				gl.glUniform1fv(mShininessHandle, 4, new float[]{f}, 0);
 		} else {
 			throw new IllegalArgumentException();
 		}
@@ -602,6 +622,11 @@ public class JOGL implements IGL, IGLTextureProvider {
 	    //assert(mTReflectanceHandle != -1);
 		mIAmbiantHandle = gl.glGetUniformLocation(programHandle, "i_ambiant");
 	    //assert(mIAmbiantHandle != -1);
+		mDiffuseHandle = gl.glGetUniformLocation(programHandle, "m_diffuse");
+		mAmbiantHandle = gl.glGetUniformLocation(programHandle, "m_ambiant");
+		mSpecularHandle = gl.glGetUniformLocation(programHandle, "m_specular");
+		mEmissionHandle = gl.glGetUniformLocation(programHandle, "m_emission");
+		mShininessHandle = gl.glGetUniformLocation(programHandle, "m_shininess");
 	    
 		System.out.println("mVertexHandle = " + mVertexHandle);
 		System.out.println("mNormalHandle = " + mNormalHandle);

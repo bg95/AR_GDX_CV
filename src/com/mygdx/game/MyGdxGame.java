@@ -686,10 +686,15 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 
         float[] mvp_matrix = new float[16];
 		Matrix.multiplyMM(mvp_matrix , 0, mProjectionMatrix, 0, mViewMatrix, 0);
-        
+
+		Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
+		Gdx.gl.glDepthFunc(GL20.GL_LEQUAL);
+		Gdx.gl.glDepthMask(true);
+		Gdx.gl.glClear(GL20.GL_DEPTH_BUFFER_BIT);
+		
 		jogl.glPushMatrix();
 	    jogl.setMatrix(mvp_matrix);
-	    mmd_model.update(System.currentTimeMillis() / 30 % 1000);
+	    mmd_model.update((float) (System.currentTimeMillis() / 30.0 % 1000.0));
 		mmd_model.draw(jogl);
 		jogl.glPopMatrix();
 	}
