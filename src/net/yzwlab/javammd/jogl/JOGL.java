@@ -83,9 +83,7 @@ public class JOGL implements IGL, IGLTextureProvider {
 		+	"varying vec2 v_texcoord;\n"
 		+	"void main (void) {\n"
 		+	"	vec4 color = texture2D(t_reflectance, v_texcoord);\n"
-		+	"	//vec4 color = vec4(1,1,1,1);\n"
 		+	"	gl_FragColor = color * (vec4(v_diffuse) + i_ambient);\n"
-		+	"	gl_FragColor.a = 1.0f;\n"
 		+	"}";
 
 	int mVertexHandle, mNormalHandle, mTexcoordHandle;
@@ -112,6 +110,9 @@ public class JOGL implements IGL, IGLTextureProvider {
 		this.gl = gl;
 		initShaders();
 		onSurfaceCreated();
+		gl.glEnable(GL20.GL_DEPTH_TEST);
+		gl.glDepthFunc(GL20.GL_LEQUAL);
+		gl.glDepthMask(true);
 	}
 
 	@Override
@@ -234,6 +235,7 @@ public class JOGL implements IGL, IGLTextureProvider {
 			throw new IllegalArgumentException();
 		}
 		//gl.glBegin(imode);
+		System.out.println("glBegin");
 		vertex_attrib_list.clear();
 		vtx_cnt = nrm_cnt = tex_cnt = 0;
 	}
@@ -241,25 +243,34 @@ public class JOGL implements IGL, IGLTextureProvider {
 	@Override
 	public void glEnd() {
 		//gl.glEnd();
+		System.out.println("glEnd");
 		if (imode != GL20.GL_TRIANGLES)
 			throw new IllegalArgumentException();
 		//TODO:
 		FloatBuffer attrib_buffer = ByteBuffer.allocateDirect(vertex_attrib_list.size() * FLOAT_SIZE).order(ByteOrder.nativeOrder()).asFloatBuffer(); 
 		for (Float f : vertex_attrib_list)
 			attrib_buffer.put(f.floatValue());
+		/*
+		int buffer = gl.glGenBuffer();
+		gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, buffer);
+		gl.glBufferData(GL20.GL_ARRAY_BUFFER, vertex_attrib_list.size() * FLOAT_SIZE, attrib_buffer, GL20.GL_STATIC_DRAW);
+		*/
 		if (mVertexHandle != -1) {
 			attrib_buffer.position(VTX_OFFSET);
 			gl.glVertexAttribPointer(mVertexHandle, 3, GL20.GL_FLOAT, false, ATTRIB_SIZE * FLOAT_SIZE, attrib_buffer);
+			//gl.glVertexAttribPointer(mVertexHandle, 3, GL20.GL_FLOAT, false, ATTRIB_SIZE * FLOAT_SIZE, VTX_OFFSET * FLOAT_SIZE);
 			gl.glEnableVertexAttribArray(mVertexHandle);
 		}
 		if (mTexcoordHandle != -1) {
 			attrib_buffer.position(TEX_OFFSET);
 			gl.glVertexAttribPointer(mTexcoordHandle, 2, GL20.GL_FLOAT, false, ATTRIB_SIZE * FLOAT_SIZE, attrib_buffer);
+			//gl.glVertexAttribPointer(mTexcoordHandle, 2, GL20.GL_FLOAT, false, ATTRIB_SIZE * FLOAT_SIZE, TEX_OFFSET * FLOAT_SIZE);
 			gl.glEnableVertexAttribArray(mTexcoordHandle);
 		}
 		if (mNormalHandle != -1) {
 			attrib_buffer.position(NRM_OFFSET);
 			gl.glVertexAttribPointer(mNormalHandle, 3, GL20.GL_FLOAT, normalize_enabled, ATTRIB_SIZE * FLOAT_SIZE, attrib_buffer);
+			//gl.glVertexAttribPointer(mNormalHandle, 3, GL20.GL_FLOAT, normalize_enabled, ATTRIB_SIZE * FLOAT_SIZE, NRM_OFFSET * FLOAT_SIZE);
 			gl.glEnableVertexAttribArray(mNormalHandle);
 		}
 		if (mMVPMatrixHandle != -1)
@@ -281,95 +292,10 @@ public class JOGL implements IGL, IGLTextureProvider {
 		indices.position(0);
 		//System.out.println("Drawing, #vtx=" + vtx_cnt + ", #nrm=" + nrm_cnt + ", #tex=" + tex_cnt);
 		gl.glDrawArrays(GL20.GL_TRIANGLES, 0, vtx_cnt);
-		
-		///for test
-		final float[] triangle1VerticesData = {
-	            // X, Y, Z,
-	            // R, G, B, A
-	            -0.5f, -0.25f, 0.0f,
-	            1.0f, 0.0f, 0.0f, 1.0f,
-	 
-	            0.5f, -0.25f, 0.0f,
-	            0.0f, 0.0f, 1.0f, 1.0f,
-	 
-	            0.0f, 0.559016994f, 0.0f,
-	            0.0f, 1.0f, 0.0f, 1.0f};
-	    // Initialize the buffers.
-	    FloatBuffer mTriangle1Vertices = ByteBuffer.allocateDirect(triangle1VerticesData.length * 4)
-	    .order(ByteOrder.nativeOrder()).asFloatBuffer();
-	    mTriangle1Vertices.put(triangle1VerticesData).position(0);
-		//drawTriangle(mTriangle1Vertices);
-		
+		//gl.glDrawElements(GL20.GL_TRIANGLES, vtx_cnt, GL20.GL_UNSIGNED_SHORT, indices);
 	}
 	
-    private final int mStrideBytes = 7 * 4;
-    private final int mPositionOffset = 0;
-    private final int mPositionDataSize = 3;
-    private final int mColorOffset = 3;
-    private final int mColorDataSize = 4;
-	//for test
-	private void drawTriangle(final FloatBuffer aTriangleBuffer)
-    {
-        // Pass in the position information
-        aTriangleBuffer.position(mPositionOffset);
-        gl.glVertexAttribPointer(mVertexHandle, mPositionDataSize, GL20.GL_FLOAT, false,
-                mStrideBytes, aTriangleBuffer);
-     
-        gl.glEnableVertexAttribArray(mVertexHandle);
-     
-        // Pass in the color information
-        /*
-        aTriangleBuffer.position(mColorOffset);
-        gl.glVertexAttribPointer(mColorHandle, mColorDataSize, GL20.GL_FLOAT, false,
-                mStrideBytes, aTriangleBuffer);
-     
-        gl.glEnableVertexAttribArray(mColorHandle);*/
-     
-        // This multiplies the view matrix by the model matrix, and stores the result in the MVP matrix
-        // (which currently contains model * view).
-        //Matrix.multiplyMM(mvp_matrix, 0, mViewMatrix, 0, mModelMatrix, 0);
-     
-        // This multiplies the modelview matrix by the projection matrix, and stores the result in the MVP matrix
-        // (which now contains model * view * projection).
-        //Matrix.multiplyMM(mvp_matrix, 0, mProjectionMatrix, 0, mvp_matrix, 0);
-
-		// Position the eye behind the origin.
-	    final float eyeX = 0.0f;
-	    final float eyeY = 0.0f;
-	    final float eyeZ = 1.5f;
-	 
-	    // We are looking toward the distance
-	    final float lookX = 0.0f;
-	    final float lookY = 0.0f;
-	    final float lookZ = -5.0f;
-	 
-	    // Set our up vector. This is where our head would be pointing were we holding the camera.
-	    final float upX = 0.0f;
-	    final float upY = 1.0f;
-	    final float upZ = 0.0f;
-	 
-	    float[] mViewMatrix = new float[16];
-		// Set the view matrix. This matrix can be said to represent the camera position.
-	    // NOTE: In OpenGL 1, a ModelView matrix is used, which is a combination of a model and
-	    // view matrix. In OpenGL 2, we can keep track of these matrices separately if we choose.
-	    Matrix.setLookAtM(mViewMatrix , 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ);
-	    final float ratio = (float) 640 / 480;
-	    final float left = -ratio;
-	    final float right = ratio;
-	    final float bottom = -1.0f;
-	    final float top = 1.0f;
-	    final float near = 1.0f;
-	    final float far = 10.0f;
-	 
-	    float[] mProjectionMatrix = new float[16];
-		Matrix.frustumM(mProjectionMatrix, 0, left, right, bottom, top, near, far);
-	    
-        Matrix.multiplyMM(mvp_matrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
-        gl.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvp_matrix, 0);
-        gl.glDrawArrays(GL20.GL_TRIANGLES, 0, 3);
-    }
-
-	private void extendToIndex(ArrayList<Float> a, int i) {
+    private void extendToIndex(ArrayList<Float> a, int i) {
 		while (a.size() < i + 1)
 			a.add(0f);
 	}
@@ -509,7 +435,6 @@ public class JOGL implements IGL, IGLTextureProvider {
 	@Override
 	public void glMaterialfv(C c1, C c2, float[] fv) {
 		//TODO
-		/*
 		int ic1 = 0;
 		if (c1 == C.GL_FRONT_AND_BACK) {
 			ic1 = GL20.GL_FRONT_AND_BACK;
@@ -518,26 +443,27 @@ public class JOGL implements IGL, IGLTextureProvider {
 		}
 		int ic2 = 0;
 		if (c2 == C.GL_AMBIENT) {
-			ic2 = GL20.GL_AMBIENT;
+			//ic2 = GL20.GL_AMBIENT;
+			System.out.println("set ambiant " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
+			gl.glUniform4fv(mIAmbiantHandle, 4, fv, 0);
 		} else if (c2 == C.GL_DIFFUSE) {
-			ic2 = GL20.GL_DIFFUSE;
+			//ic2 = GL20.GL_DIFFUSE;
+			System.out.println("set diffuse " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
 		} else if (c2 == C.GL_EMISSION) {
-			ic2 = GL20.GL_EMISSION;
+			//ic2 = GL20.GL_EMISSION;
+			System.out.println("set emission " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
 		} else if (c2 == C.GL_SPECULAR) {
-			ic2 = GL20.GL_SPECULAR;
-		} else if (c2 == C.GL_SHININESS) {
-			ic2 = GL20.GL_SHININESS;
+			//ic2 = GL20.GL_SPECULAR;
+			System.out.println("set specular " + fv[0] + "," + fv[1] + "," + fv[2] + "," + fv[3]);
 		} else {
 			throw new IllegalArgumentException();
 		}
-		gl.glMaterialfv(ic1, ic2, fv, 0);
-		*/
+		//gl.glMaterialfv(ic1, ic2, fv, 0);
 	}
 
 	@Override
 	public void glMaterialf(C c1, C c2, float f) {
 		//TODO
-		/*
 		int ic1 = 0;
 		if (c1 == C.GL_FRONT_AND_BACK) {
 			ic1 = GL20.GL_FRONT_AND_BACK;
@@ -545,21 +471,13 @@ public class JOGL implements IGL, IGLTextureProvider {
 			throw new IllegalArgumentException();
 		}
 		int ic2 = 0;
-		if (c2 == C.GL_AMBIENT) {
-			ic2 = GL20.GL_AMBIENT;
-		} else if (c2 == C.GL_DIFFUSE) {
-			ic2 = GL20.GL_DIFFUSE;
-		} else if (c2 == C.GL_EMISSION) {
-			ic2 = GL20.GL_EMISSION;
-		} else if (c2 == C.GL_SPECULAR) {
-			ic2 = GL20.GL_SPECULAR;
-		} else if (c2 == C.GL_SHININESS) {
-			ic2 = GL20.GL_SHININESS;
+		if (c2 == C.GL_SHININESS) {
+			//ic2 = GL20.GL_SHININESS;
+			System.out.println("set shininess " + f);
 		} else {
 			throw new IllegalArgumentException();
 		}
-		gl.glMaterialf(ic1, ic2, f);
-		*/
+		//gl.glMaterialf(ic1, ic2, f);
 	}
 
 	@Override

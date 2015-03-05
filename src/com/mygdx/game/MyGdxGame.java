@@ -653,14 +653,14 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	void testDraw() {		
 		System.out.println("Drawing model...");
 		// Position the eye behind the origin.
-	    final float eyeX = 0.0f;
-	    final float eyeY = 15.0f;
-	    final float eyeZ = 20f;
+	    final float eyeX = 80.0f;
+	    final float eyeY = 10.0f;
+	    final float eyeZ = 0f;
 	 
 	    // We are looking toward the distance
-	    final float lookX = 0.0f;
-	    final float lookY = 0.0f;
-	    final float lookZ = -5.0f;
+	    final float lookX = -5.0f;
+	    final float lookY = 10.0f;
+	    final float lookZ = 10.0f;
 	 
 	    // Set our up vector. This is where our head would be pointing were we holding the camera.
 	    final float upX = 0.0f;
@@ -678,7 +678,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	    final float right = ratio;
 	    final float bottom = -1.0f;
 	    final float top = 1.0f;
-	    final float near = 1.0f;
+	    final float near = 5.0f;
 	    final float far = 100.0f;
 	 
 	    float[] mProjectionMatrix = new float[16];
@@ -689,7 +689,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
         
 		jogl.glPushMatrix();
 	    jogl.setMatrix(mvp_matrix);
-	    mmd_model.update(System.currentTimeMillis() / 10 % 1000);
+	    mmd_model.update(System.currentTimeMillis() / 30 % 1000);
 		mmd_model.draw(jogl);
 		jogl.glPopMatrix();
 	}
