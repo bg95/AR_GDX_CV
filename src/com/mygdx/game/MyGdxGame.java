@@ -44,7 +44,8 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	//File pmd_dir = new File("mmd/Models/Tda2698489/Tda®¹~NEAyh_Ver1.00(nCq[üÏ).pmx");
 	File pmd_dir = new File("mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd");
 	//File pmd_dir = new File("mmd/Models/saberlily/saberlily1.pmd");
-	File vmd_dir = new File("mmd/VMD/aoitori.vmd");
+	//File vmd_dir = new File("mmd/VMD/aoitori.vmd");
+	File vmd_dir = new File("mmd/VMD/恋愛サーキュレーション/楒垽僒乕僉儏儗乕僔儑儞-偪傃.vmd");
 	File pmd_filename = new File(pmd_dir.getName());
 	File vmd_filename = new File(vmd_dir.getName());
 	boolean loaded = false;
