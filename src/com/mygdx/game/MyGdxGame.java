@@ -53,9 +53,6 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	
 	static final ModelBuilder model_builder = new ModelBuilder();
 	final File calib_file = new File("camera.dat");
-	//final String model_filename = "models/more/textures/Miku_1_4.g3db";
-	//final String model_filename = "models/more/EnoshimaJunko/TEX/junko.g3db";
-	//final String model_filename = "models/BRS/BRSDigitrevx/BRS.g3db";
 	final int MAX_MODELS = 15;
 	
 	Timer timer;
@@ -68,68 +65,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 
 	//AssetManager assets = new AssetManager();
 	//boolean loading;
-	class ModelInfo
-	{
-		public ModelInfo(File pmd, File vmd, MatOfPoint2f c, JOGL _jogl) throws ReadException, IOException {
-			jogl = _jogl;
-			assert pmd.getParentFile().equals(jogl.getBaseDir());
-			//loading = true;
-			//assets.load(file_name, Model.class);
-			/*
-			this.pmd = pmd;
-			this.vmd = vmd;
-			pmd_name = pmd.getName();
-			vmd_name = vmd.getName();
-			*/
-			model = new MMDModel();
-			model.openPMD(new FileBuffer(pmd));
-			model.openVMD(new FileBuffer(vmd));
-			model.prepare(jogl, MyGdxGame.this);
-			quad = c;
-			double b = Math.random();
-			double g = Math.random();
-			double r = Math.random();
-			double v = Math.max(Math.max(r, g), b) / 255.0;
-			color = new Scalar(b / v, g / v, r / v);
-		}
-		
-		public ModelInfo(MMDModel model, MatOfPoint2f c, JOGL _jogl) {
-			jogl = _jogl;
-			//loading = true;
-			this.model = model;
-			quad = c;
-			double b = Math.random();
-			double g = Math.random();
-			double r = Math.random();
-			double v = Math.max(Math.max(r, g), b) / 255.0;
-			color = new Scalar(b / v, g / v, r / v);
-		}
-		
-		/*
-		public boolean checkLoaded() {
-			if (loading && assets.update())
-			{
-				model = assets.get(name, Model.class);
-				if (model == null)
-					model = model_builder.createBox(3f, 3f, 3f,
-							new Material(ColorAttribute.createDiffuse(Color.GREEN)),
-							Usage.Position | Usage.Normal);
-				loading = false;
-				return true;
-			}
-			return !loading;
-		}*/
-		public MatOfPoint2f quad;
-		//AssetManager asset;
-		//File pmd, vmd;
-		//String pmd_name, vmd_name;
-		//Model model;
-		MMDModel model;
-		//boolean loading;
-		Scalar color;
-		JOGL jogl;
-		int frameno;
-	};
+
 	ArrayList<ModelInfo> model_list = new ArrayList<ModelInfo>();
 	
 	@Override
