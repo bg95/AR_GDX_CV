@@ -353,44 +353,9 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 					UtilAR.imShow("unwarp", unwarp_webcam);
 					String code = CodeHelper.decode(unwarp_webcam);
 					System.out.print("QR code: " + code + "\n");
-				}
-				
+				}				
 			}
-			//System.out.print("All " + i + " quadrilaterals processed\n");
-			//System.out.print(System.currentTimeMillis() + "\n");
-			/*
-			if (!approx_curves2f.isEmpty())
-			{
-				MatOfPoint2f c = approx_curves2f.get(0);
-				c = adjustPolygonToMatch(c, prev_c);
-				prev_c = c;
-				Matrix4 transform = correctSolvePnP(object_corners, c,
-						intrinsics, distortion, cam.fieldOfView, webcam.rows());
-				Matrix4 ttransl = new Matrix4();
-				ttransl.translate(0.5f, 0.5f, -0.5f);
-				instances_list.add(new ModelInstance(coord_model[0], transform.cpy()));
-				instances_list.add(new ModelInstance(coord_model[1], transform.cpy()));
-				instances_list.add(new ModelInstance(coord_model[2], transform.cpy()));
-				instances_list.add(new ModelInstance(box_model, ttransl.mulLeft(transform.cpy())));
-				
-				//unwarp
-				Mat unwarp_webcam = new Mat(400, 400, webcam.type());
-				MatOfPoint2f dst = new MatOfPoint2f(new Point[] {
-						new Point(0, 0),
-						new Point(unwarp_webcam.rows(), 0),
-						new Point(unwarp_webcam.rows(), unwarp_webcam.cols()),
-						new Point(0, unwarp_webcam.cols())
-				});
-				if (c != null)
-				{
-					Mat warp = Imgproc.getPerspectiveTransform(c, dst);
-					Imgproc.warpPerspective(undist_webcam, unwarp_webcam, warp, unwarp_webcam.size(), Imgproc.INTER_LINEAR);
-					UtilAR.imShow("unwarp", unwarp_webcam);
-					String code = CodeHelper.decode(unwarp_webcam);
-					System.out.print("QR code: " + code + "\n");
-				}
-			}
-			*/
+
 		}
 
 		//UtilAR.imDrawBackground(undist_webcam);
@@ -399,16 +364,16 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	    Gdx.gl.glClear(Gdx.gl.GL_COLOR_BUFFER_BIT);
 		//new TestDrawer(Gdx.gl, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());//.onDrawFrame();
 		
-		testDraw();
-		
+	    /*
 		if (calib.isCalibrated())
 		{
 	        model_batch.begin(cam);
 	        for (ModelInstance m : instances_list)
 	        	model_batch.render(m, environment);
 	        model_batch.end();
-	       
-	     }
+	    }
+	    */
+		testDraw();
 		//System.out.print("Render end\n");
 		//System.out.print(System.currentTimeMillis() + "\n");
 	}
@@ -632,6 +597,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		/*
 		for (int j = 0; j < mmd_model.getFaceCount(); j++) {
 			System.out.println("Face #" + String.valueOf(j + 1) + ": "
 					+ mmd_model.getFaceName(j));
@@ -640,6 +606,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 			System.out.println("Bone #" + String.valueOf(j + 1) + ": "
 					+ new String(mmd_model.getBone(j).getName()));
 		}
+		*/
 		if (loaded == false) {
 			try {
 				mmd_model.prepare(jogl, this);
@@ -651,16 +618,20 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	}
 	
 	void testDraw() {		
-		System.out.println("Drawing model...");
+		//System.out.println("Drawing model...");
+		Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
+		Gdx.gl.glDepthFunc(GL20.GL_LEQUAL);
+		Gdx.gl.glDepthMask(true);
+		Gdx.gl.glClear(GL20.GL_DEPTH_BUFFER_BIT);
 		// Position the eye behind the origin.
-	    final float eyeX = 80.0f;
+	    final float eyeX = 0.0f;
 	    final float eyeY = 10.0f;
-	    final float eyeZ = 0f;
+	    final float eyeZ = 80.0f;
 	 
 	    // We are looking toward the distance
-	    final float lookX = -5.0f;
+	    final float lookX = 0.0f;
 	    final float lookY = 10.0f;
-	    final float lookZ = 10.0f;
+	    final float lookZ = 0.0f;
 	 
 	    // Set our up vector. This is where our head would be pointing were we holding the camera.
 	    final float upX = 0.0f;
@@ -686,11 +657,6 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 
         float[] mvp_matrix = new float[16];
 		Matrix.multiplyMM(mvp_matrix , 0, mProjectionMatrix, 0, mViewMatrix, 0);
-
-		Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
-		Gdx.gl.glDepthFunc(GL20.GL_LEQUAL);
-		Gdx.gl.glDepthMask(true);
-		Gdx.gl.glClear(GL20.GL_DEPTH_BUFFER_BIT);
 		
 		jogl.glPushMatrix();
 	    jogl.setMatrix(mvp_matrix);
