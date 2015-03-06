@@ -28,6 +28,8 @@ import org.opencv.imgproc.Imgproc;
 
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
@@ -53,6 +55,9 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	JOGL jogl;
 	MMDModel mmd_model;
 	
+	File music_file = new File("luotianyi_xinhuali.mp3");
+	//Music music;
+	
 	static final ModelBuilder model_builder = new ModelBuilder();
 	final File calib_file = new File("camera.dat");
 	final int MAX_MODELS = 15;
@@ -69,7 +74,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	//boolean loading;
 
 	ArrayList<ModelInfo> model_list = new ArrayList<ModelInfo>();
-	final float frame_rate = 50;
+	final float frame_rate = 30;
 	
 	@Override
 	public void create () {
@@ -104,6 +109,8 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		
 		//testInit();
 		initModel();
+		
+		//music = Gdx.audio.newMusic(new FileHandle(music_file));
 	}
 
 	@Override
@@ -184,21 +191,34 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 					});
 			instances_list.clear();
 			int i = 0;
+			i = 0;
+			System.out.println("approx_curves.size=" + approx_curves.size());
+			for (ModelInfo info : model_list)
+			{
+				System.out.println("matching_inv[" + i + "]=" + matching_inv[i]);
+				if (matching_inv[i] == -1)
+				{
+					info.pause();
+				}
+				i++;
+			}
+			i = 0;
 			for (MatOfPoint2f c : approx_curves2f)
 			{				
 				ModelInfo model_info = null;
 				if (matching[i] == -1) //new quad
 				{
-					model_info = new ModelInfo(mmd_model, c, jogl);
+					model_info = new ModelInfo(mmd_model, c, jogl, Gdx.audio.newMusic(new FileHandle(music_file)));
 					if (model_info != null)
 						model_list.add(model_info);
 					if (model_list.size() > MAX_MODELS)
 					{
-						model_list.remove(0);
+						//model_list.remove(0);
 					}
 				}
 				else //old quad, renew
 				{
+					matching_inv[matching[i]] = 1;
 					model_info = model_list.get(matching[i]);
 					c = adjustPolygonToMatch(c, model_info.quad);
 					model_info.quad = c;
@@ -215,9 +235,13 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 				}
 				List<MatOfPoint> tmp = new ArrayList<MatOfPoint>();
 				tmp.add(new MatOfPoint(c.toArray()));
+				//if (model_info != null)
+				//	Imgproc.drawContours(undist_webcam, tmp, -1, model_info.color);
+				
+				//music
 				if (model_info != null)
-					Imgproc.drawContours(undist_webcam, tmp, -1, model_info.color);
-
+					model_info.play();
+/*
 				//unwarp
 				Mat unwarp_webcam = new Mat(400, 400, webcam.type());
 				MatOfPoint2f dst = new MatOfPoint2f(new Point[] {
@@ -230,10 +254,10 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 				{
 					Mat warp = Imgproc.getPerspectiveTransform(c, dst);
 					Imgproc.warpPerspective(undist_webcam, unwarp_webcam, warp, unwarp_webcam.size(), Imgproc.INTER_LINEAR);
-					UtilAR.imShow("unwarp", unwarp_webcam);
+					//UtilAR.imShow("unwarp", unwarp_webcam);
 					String code = CodeHelper.decode(unwarp_webcam);
 					System.out.print("QR code: " + code + "\n");
-				}				
+				}		*/		
 			}
 
 		}
@@ -441,7 +465,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 			}
 			i++;
 		}
-		MatchingAlg.maxBipartite(w, matching, new int[dst.size()]);
+		MatchingAlg.maxBipartite(w, matching, matching_inv);
 		for (i = 0; i < src.size(); i++)
 			if (matching[i] != -1)
 			{

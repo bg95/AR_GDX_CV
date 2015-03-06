@@ -124,7 +124,7 @@ public class CameraCalibrator {
                 */
     	mPatternWasFound = Calib3d.findChessboardCorners(grayFrame, mPatternSize, mCorners,
     			Calib3d.CALIB_CB_ADAPTIVE_THRESH + Calib3d.CALIB_CB_NORMALIZE_IMAGE + Calib3d.CALIB_CB_FAST_CHECK + Calib3d.CALIB_CB_FILTER_QUADS);
-    	System.out.print("Pattern " + (mPatternWasFound ? "" : "not ") + "found\n");
+    	//System.out.print("Pattern " + (mPatternWasFound ? "" : "not ") + "found\n");
     }
 
     public void addCorners() {

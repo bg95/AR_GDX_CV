@@ -12,6 +12,9 @@ import net.yzwlab.javammd.model.MMDModel;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Scalar;
 
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Music.OnCompletionListener;
+
 class ModelInfo
 {
 	public ModelInfo(File pmd, File vmd, IGLTextureProvider.Handler handler, MatOfPoint2f c, JOGL _jogl) throws ReadException, IOException {
@@ -39,7 +42,7 @@ class ModelInfo
 		time = System.currentTimeMillis();
 	}
 	
-	public ModelInfo(MMDModel model, MatOfPoint2f c, JOGL _jogl) {
+	public ModelInfo(MMDModel model, MatOfPoint2f c, JOGL _jogl, Music _music) {
 		jogl = _jogl;
 		//loading = true;
 		this.model = model;
@@ -51,6 +54,17 @@ class ModelInfo
 		color = new Scalar(b / v, g / v, r / v);
 		frameno = 0;
 		time = System.currentTimeMillis();
+		
+		music = _music;
+		music.setLooping(false);
+		music.setOnCompletionListener(new OnCompletionListener() {
+
+			@Override
+			public void onCompletion(Music music) {
+				music.stop();
+			}
+			
+		});
 	}
 	
 	public float updateFrameNo(float framerate) {
@@ -59,6 +73,16 @@ class ModelInfo
 		frameno += dt * framerate / 1000.0f;
 		time = ct;
 		return frameno;
+	}
+	
+	public void play() {
+		music.play();
+		time = System.currentTimeMillis();
+	}
+	
+	public void pause() {
+		music.pause();
+		System.out.println("music paused");
 	}
 	
 	/*
@@ -86,4 +110,5 @@ class ModelInfo
 	JOGL jogl;
 	float frameno;
 	long time;
+	Music music;
 };
