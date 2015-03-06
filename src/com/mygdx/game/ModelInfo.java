@@ -53,10 +53,10 @@ class ModelInfo
 		time = System.currentTimeMillis();
 	}
 	
-	public int updateFrameNo(float framerate) {
+	public float updateFrameNo(float framerate) {
 		long ct = System.currentTimeMillis();
 		long dt = ct - time;
-		frameno += (int) (dt * framerate / 1000.0f);
+		frameno += dt * framerate / 1000.0f;
 		time = ct;
 		return frameno;
 	}
@@ -84,6 +84,6 @@ class ModelInfo
 	//boolean loading;
 	Scalar color;
 	JOGL jogl;
-	int frameno;
+	float frameno;
 	long time;
 };
