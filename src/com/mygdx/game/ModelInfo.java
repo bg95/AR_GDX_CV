@@ -82,7 +82,11 @@ class ModelInfo
 	
 	public void pause() {
 		music.pause();
-		System.out.println("music paused");
+		//System.out.println("music paused");
+	}
+	
+	public boolean isPlaying() {
+		return music.isPlaying();
 	}
 	
 	/*

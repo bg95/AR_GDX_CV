@@ -14,6 +14,7 @@ import net.yzwlab.javammd.jogl.io.FileBuffer;
 import net.yzwlab.javammd.model.MMDModel;
 
 import org.opencv.calib3d.Calib3d;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
@@ -88,6 +89,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		
 		//cam_control = new CameraInputController(cam);
 		Gdx.input.setInputProcessor(cam_control);
+		Gdx.graphics.setTitle("Happy Girls' Day!");
 		
 		model_batch = new ModelBatch();
 		
@@ -107,6 +109,11 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		undist_webcam = new Mat();
 		calib.load(calib_file);
 		
+		Mat tempmat = Mat.zeros(150, 400, CvType.CV_8UC3);
+        Core.putText(tempmat, "Loading...", new Point(50, 100),
+                Core.FONT_HERSHEY_SIMPLEX, 2.0, new Scalar(255, 255, 0));
+        UtilAR.imShow("Loading...", tempmat);
+		
 		//testInit();
 		initModel();
 		
@@ -117,6 +124,8 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	public void render () {
 		//System.out.print("Render start\n");
 		//System.out.print(System.currentTimeMillis() + "\n");
+        UtilAR.imClose("Loading...");
+        
 		if (!vc.grab())
 			System.out.print("unable to grab capture\n");
 		if (!vc.retrieve(webcam))
@@ -192,10 +201,10 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 			instances_list.clear();
 			int i = 0;
 			i = 0;
-			System.out.println("approx_curves.size=" + approx_curves.size());
+			//System.out.println("approx_curves.size=" + approx_curves.size());
 			for (ModelInfo info : model_list)
 			{
-				System.out.println("matching_inv[" + i + "]=" + matching_inv[i]);
+				//System.out.println("matching_inv[" + i + "]=" + matching_inv[i]);
 				if (matching_inv[i] == -1)
 				{
 					info.pause();
@@ -214,6 +223,15 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 					if (model_list.size() > MAX_MODELS)
 					{
 						//model_list.remove(0);
+						/*
+						for (ModelInfo info : model_list)
+						{
+							if (info.isPlaying() == false)
+							{
+								model_list.remove(info);
+								break;
+							}
+						}*/
 					}
 				}
 				else //old quad, renew
