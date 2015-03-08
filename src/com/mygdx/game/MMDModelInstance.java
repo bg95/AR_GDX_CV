@@ -17,6 +17,7 @@ public class MMDModelInstance {
 		gl.glPushMatrix();
 		float[] result = new float[16];
 		float[] glmatrix = gl.getMatrix();
+		/*
 		float[][] duplicates = new float[3][16];
 
 		Matrix.setIdentityM(duplicates[0], 0);
@@ -34,7 +35,12 @@ public class MMDModelInstance {
 			Matrix.multiplyMM(result, 0, glmatrix, 0, result, 0);
 			gl.setMatrix(result);
 			model.draw(gl);
-		}
+		}*/
+		
+		model.update(frameno);
+		Matrix.multiplyMM(result, 0, glmatrix, 0, transform, 0);
+		gl.setMatrix(result);
+		model.draw(gl);
 		
 		gl.glPopMatrix();
 	}

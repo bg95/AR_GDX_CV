@@ -75,6 +75,11 @@ class ModelInfo
 					
 				});
 			}
+			try {
+				framerate = (float) desc.getDouble("framerate");
+			} catch (JSONException e) {
+				framerate = 30;
+			}
 			has_been_set = true;
 		}
 	}
@@ -111,7 +116,7 @@ class ModelInfo
 		}
 	}
 	
-	public float updateFrameNo(float framerate) {
+	public float updateFrameNo() {
 		long ct = System.currentTimeMillis();
 		long dt = ct - time;
 		frameno += dt * framerate / 1000.0f;
@@ -162,7 +167,7 @@ class ModelInfo
 	//boolean loading;
 	Scalar color;
 	JOGL jogl;
-	float frameno;
+	float frameno = 0, framerate = 30;
 	long time;
 	Music music;
 	String QR_code;

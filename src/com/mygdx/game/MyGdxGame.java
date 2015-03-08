@@ -46,7 +46,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	MMDAssetManager mmd_asset;
 	boolean loaded = false;
 	JOGL jogl;
-	MMDModel mmd_model;
+	//MMDModel mmd_model;
 	
 	File music_file = new File("luotianyi_xinhuali.mp3");
 	//Music music;
@@ -67,7 +67,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	//boolean loading;
 
 	ArrayList<ModelInfo> model_list = new ArrayList<ModelInfo>();
-	final float frame_rate = 30;
+	//final float frame_rate = 30;
 	
 	@Override
 	public void create () {
@@ -176,12 +176,24 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 				}
 			}
 			
-			List<MatOfPoint2f> quad_list = new ArrayList<MatOfPoint2f>();
 			int[] matching = new int[approx_curves2f.size()];
+			int[] matching_inv = new int[model_list.size()];
+			/*
+			List<MatOfPoint2f> quad_list = new ArrayList<MatOfPoint2f>();
 			for (ModelInfo i : model_list)
 				quad_list.add(i.quad);
-			int[] matching_inv = new int[quad_list.size()];
 			QuadAndCode.matchQuads(approx_curves2f, quad_list, matching, matching_inv);
+			*/
+
+			List<QuadAndCode> qc_list_quads = new ArrayList<QuadAndCode>();
+			for (MatOfPoint2f c : approx_curves2f) {
+				qc_list_quads.add(new QuadAndCode(c, CodeHelper.decodeInQuad(undist_webcam, c)));
+			}
+			List<QuadAndCode> qc_list_models = new ArrayList<QuadAndCode>();
+			for (ModelInfo info : model_list) {
+				qc_list_models.add(new QuadAndCode(info.quad, info.QR_code));
+			}
+			QuadAndCode.matchQuadAndCodes(qc_list_quads, qc_list_models, matching, matching_inv);
 			
 			MatOfPoint3f object_corners = new MatOfPoint3f(new Point3[]
 					{
@@ -204,13 +216,15 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 				i++;
 			}
 			i = 0;
-			for (MatOfPoint2f c : approx_curves2f)
-			{				
+			for (QuadAndCode qc : qc_list_quads)
+			{
+				MatOfPoint2f c = qc.quad;
+				String code = qc.code;
 				ModelInfo model_info = null;
 				if (matching[i] == -1) //new quad
 				{
 					model_info = new ModelInfo(jogl);//new ModelInfo(mmd_model, c, jogl, Gdx.audio.newMusic(new FileHandle(music_file)));
-					model_info.set(c, CodeHelper.decodeInQuad(undist_webcam, c), mmd_asset);
+					model_info.set(c, code, mmd_asset);
 					if (model_info != null)
 						model_list.add(model_info);
 					if (model_list.size() > MAX_MODELS)
@@ -242,7 +256,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 							intrinsics, distortion, cam.fieldOfView, webcam.rows());
 					Matrix4 ttransl = new Matrix4();
 					if (model_info != null)
-						instances_list.add(new MMDModelInstance(model_info.model, transform, model_info.updateFrameNo(frame_rate)));
+						instances_list.add(new MMDModelInstance(model_info.model, transform, model_info.updateFrameNo()));
 				}
 				List<MatOfPoint> tmp = new ArrayList<MatOfPoint>();
 				tmp.add(new MatOfPoint(c.toArray()));
@@ -437,11 +451,15 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	
 	//File pmd_dir = new File("mmd/Models/Tda Hagane Miku APPEND/Hagane APPEND V2/Tda Hagane Miku.pmx");
 	//File pmd_dir = new File("mmd/Models/Tda2698489/Tda®¹~NEAyh_Ver1.00(nCq[üÏ).pmx");
-	String default_pmd_dir = "mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd";
+	String[] pmd_dir_list = new String[] {
+			"mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd"
+	};
 	//File pmd_dir = new File("mmd/Models/saberlily/saberlily1.pmd");
 	//File vmd_dir = new File("mmd/VMD/aoitori.vmd");
 	//File vmd_dir = new File("mmd/VMD/恋愛サーキュレーション/楒垽僒乕僉儏儗乕僔儑儞-偪傃.vmd");
-	String default_vmd_dir = "mmd/VMD/新华里-熊猫团.vmd";
+	String[] vmd_dir_list = new String[] {
+			"mmd/VMD/新华里-熊猫团.vmd"
+	};
 	//File pmd_filename = new File(pmd_dir.getName());
 	//File vmd_filename = new File(vmd_dir.getName());
 	String jogl_base_dir = "mmd/Models/洛天依ver1.10";
@@ -449,13 +467,16 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		//new TestDrawer(Gdx.gl30, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());		
 		jogl = new JOGL(new File(jogl_base_dir), Gdx.gl);
 		mmd_asset = new MMDAssetManager(jogl);
-		try {
-			mmd_asset.load(default_pmd_dir, default_vmd_dir);
-		} catch (ReadException | IOException e) {
-			System.out.println("Error loading: " + default_pmd_dir + "  " + default_vmd_dir);
-			e.printStackTrace();
+		for (int i = 0; i < pmd_dir_list.length; i++)
+		{
+			try {
+				mmd_asset.load(pmd_dir_list[i], vmd_dir_list[i]);
+			} catch (ReadException | IOException e) {
+				System.out.println("Error loading: " + pmd_dir_list[i] + "  " + vmd_dir_list[i]);
+				e.printStackTrace();
+			}
 		}
-		mmd_model = mmd_asset.get(default_pmd_dir, default_vmd_dir);
+		//mmd_model = mmd_asset.get(pmd_dir_list[0], vmd_dir_list[0]);
 
 		/*
 		mmd_model = new MMDModel();
