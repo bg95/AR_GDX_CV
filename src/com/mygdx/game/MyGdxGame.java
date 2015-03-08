@@ -193,10 +193,10 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 			
 			MatOfPoint3f object_corners = new MatOfPoint3f(new Point3[]
 					{
-						new Point3(-5, 10, -3),
-						new Point3(5, 10, -3),
-						new Point3(5, 0, -3),
-						new Point3(-5, 0, -3)
+						new Point3(-7, 14, -3),
+						new Point3(7, 14, -3),
+						new Point3(7, 0, -3),
+						new Point3(-7, 0, -3)
 					});
 			instances_list.clear();
 			int i = 0;

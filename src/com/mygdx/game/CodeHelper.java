@@ -9,6 +9,8 @@ import java.util.Map;
 
 import javax.imageio.ImageIO;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
@@ -60,6 +62,14 @@ public class CodeHelper {
 			return code;
 		}
 		return "";
+	}
+	
+	public static JSONObject decodeJSONInQuad(Mat image, MatOfPoint2f quad) {
+		try {
+			return new JSONObject(decodeInQuad(image, quad));
+		} catch (JSONException e) {
+			return null;
+		}
 	}
 	
 	public static String decode(Mat image) {
