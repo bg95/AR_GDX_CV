@@ -43,15 +43,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	public CameraInputController cam_control;
 	public ModelBatch model_batch;
 
-	//File pmd_dir = new File("mmd/Models/Tda Hagane Miku APPEND/Hagane APPEND V2/Tda Hagane Miku.pmx");
-	//File pmd_dir = new File("mmd/Models/Tda2698489/Tda®¹~NEAyh_Ver1.00(nCq[üÏ).pmx");
-	File pmd_dir = new File("mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd");
-	//File pmd_dir = new File("mmd/Models/saberlily/saberlily1.pmd");
-	//File vmd_dir = new File("mmd/VMD/aoitori.vmd");
-	//File vmd_dir = new File("mmd/VMD/恋愛サーキュレーション/楒垽僒乕僉儏儗乕僔儑儞-偪傃.vmd");
-	File vmd_dir = new File("mmd/VMD/新华里-熊猫团.vmd");
-	File pmd_filename = new File(pmd_dir.getName());
-	File vmd_filename = new File(vmd_dir.getName());
+	MMDAssetManager mmd_asset;
 	boolean loaded = false;
 	JOGL jogl;
 	MMDModel mmd_model;
@@ -189,7 +181,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 			for (ModelInfo i : model_list)
 				quad_list.add(i.quad);
 			int[] matching_inv = new int[quad_list.size()];
-			matchQuads(approx_curves2f, quad_list, matching, matching_inv);
+			QuadAndCode.matchQuads(approx_curves2f, quad_list, matching, matching_inv);
 			
 			MatOfPoint3f object_corners = new MatOfPoint3f(new Point3[]
 					{
@@ -217,7 +209,8 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 				ModelInfo model_info = null;
 				if (matching[i] == -1) //new quad
 				{
-					model_info = new ModelInfo(mmd_model, c, jogl, Gdx.audio.newMusic(new FileHandle(music_file)));
+					model_info = new ModelInfo(jogl);//new ModelInfo(mmd_model, c, jogl, Gdx.audio.newMusic(new FileHandle(music_file)));
+					model_info.set(c, CodeHelper.decodeInQuad(undist_webcam, c), mmd_asset);
 					if (model_info != null)
 						model_list.add(model_info);
 					if (model_list.size() > MAX_MODELS)
@@ -429,7 +422,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		{
 			double tc = 0.0;
 			for (int i = 0; i < n; i++)
-				tc += dist2(p[(i + d) % n], q[i]);
+				tc += QuadAndCode.dist2(p[(i + d) % n], q[i]);
 			if (tc < cost)
 			{
 				maxd = d;
@@ -442,77 +435,29 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 		return new MatOfPoint2f(r);
 	}
 	
-	double distPoly(MatOfPoint2f mp, MatOfPoint2f mq) {
-		Point[] p = mp.toArray();
-		Point[] q = mq.toArray();
-		int n = p.length;
-		//assert p.length == q.length
-		int maxd = 0;
-		double cost = 1.0 / 0.0;
-		for (int d = 0; d < n; d++)
-		{
-			double tc = 0.0;
-			for (int i = 0; i < n; i++)
-				tc += dist2(p[(i + d) % n], q[i]);
-			if (tc < cost)
-			{
-				maxd = d;
-				cost = tc;
-			}
-		}
-		return cost;
-	}
-	
-	double dist2(Point a, Point b) {
-		return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
-	}
-	
-	double quad_match_thres = 1E4;
-	double quad_match_offset = 2E6 * 4;
-	void matchQuads(List<MatOfPoint2f> src, List<MatOfPoint2f> dst, int[] matching, int[] matching_inv) {
-		double[][] w = new double[src.size()][dst.size()];
-		int i, j;
-		i = 0;
-		for (MatOfPoint2f p : src)
-		{
-			j = 0;
-			for (MatOfPoint2f q : dst)
-			{
-				w[i][j] = quad_match_offset - distPoly(p, q);
-				j++;
-			}
-			i++;
-		}
-		MatchingAlg.maxBipartite(w, matching, matching_inv);
-		for (i = 0; i < src.size(); i++)
-			if (matching[i] != -1)
-			{
-				j = matching[i];
-				if (w[i][j] < quad_match_offset - quad_match_thres)
-				{
-					matching_inv[j] = -1;
-					matching[i] = -1;
-				}
-			}
-		double avg_dist = 0.0;
-		int cnt_mat = 0;
-		for (i = 0; i < src.size(); i++)
-			if (matching[i] != -1)
-			{
-				cnt_mat++;
-				avg_dist += quad_match_offset - w[i][matching[i]];
-			}
-		if (cnt_mat != 0)
-		{
-			avg_dist /= cnt_mat;
-			//quad_match_thres += (avg_dist * 3.0 - quad_match_thres) * 0.1;
-		}
-	}
-
+	//File pmd_dir = new File("mmd/Models/Tda Hagane Miku APPEND/Hagane APPEND V2/Tda Hagane Miku.pmx");
+	//File pmd_dir = new File("mmd/Models/Tda2698489/Tda®¹~NEAyh_Ver1.00(nCq[üÏ).pmx");
+	String default_pmd_dir = "mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd";
+	//File pmd_dir = new File("mmd/Models/saberlily/saberlily1.pmd");
+	//File vmd_dir = new File("mmd/VMD/aoitori.vmd");
+	//File vmd_dir = new File("mmd/VMD/恋愛サーキュレーション/楒垽僒乕僉儏儗乕僔儑儞-偪傃.vmd");
+	String default_vmd_dir = "mmd/VMD/新华里-熊猫团.vmd";
+	//File pmd_filename = new File(pmd_dir.getName());
+	//File vmd_filename = new File(vmd_dir.getName());
+	String jogl_base_dir = "mmd/Models/洛天依ver1.10";
 	void initModel() {
 		//new TestDrawer(Gdx.gl30, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());		
-		jogl = new JOGL(pmd_dir.getParentFile(), Gdx.gl);
+		jogl = new JOGL(new File(jogl_base_dir), Gdx.gl);
+		mmd_asset = new MMDAssetManager(jogl);
+		try {
+			mmd_asset.load(default_pmd_dir, default_vmd_dir);
+		} catch (ReadException | IOException e) {
+			System.out.println("Error loading: " + default_pmd_dir + "  " + default_vmd_dir);
+			e.printStackTrace();
+		}
+		mmd_model = mmd_asset.get(default_pmd_dir, default_vmd_dir);
 
+		/*
 		mmd_model = new MMDModel();
 		try {
 			System.out.println("Start loading pmd");
@@ -531,7 +476,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 				e.printStackTrace();
 			}
 			loaded = true;
-		}
+		}*/
 	}
 
 	//IGLTextureProvider.Handler

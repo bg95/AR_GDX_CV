@@ -9,30 +9,21 @@ import net.yzwlab.javammd.jogl.JOGL;
 import net.yzwlab.javammd.jogl.io.FileBuffer;
 import net.yzwlab.javammd.model.MMDModel;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Scalar;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Music.OnCompletionListener;
+import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.utils.GdxRuntimeException;
 
 class ModelInfo
 {
-	public ModelInfo(File pmd, File vmd, IGLTextureProvider.Handler handler, MatOfPoint2f c, JOGL _jogl) throws ReadException, IOException {
+	public ModelInfo(JOGL _jogl) {
 		jogl = _jogl;
-		assert pmd.getParentFile().equals(jogl.getBaseDir());
-		//loading = true;
-		//assets.load(file_name, Model.class);
-		/*
-		this.pmd = pmd;
-		this.vmd = vmd;
-		pmd_name = pmd.getName();
-		vmd_name = vmd.getName();
-		*/
-		model = new MMDModel();
-		model.openPMD(new FileBuffer(pmd));
-		model.openVMD(new FileBuffer(vmd));
-		model.prepare(jogl, handler);
-		quad = c;
 		double b = Math.random();
 		double g = Math.random();
 		double r = Math.random();
@@ -40,9 +31,59 @@ class ModelInfo
 		color = new Scalar(b / v, g / v, r / v);
 		frameno = 0;
 		time = System.currentTimeMillis();
+		has_been_set = false;
 	}
 	
-	public ModelInfo(MMDModel model, MatOfPoint2f c, JOGL _jogl, Music _music) {
+	public void set(MatOfPoint2f c, String _QR_code, MMDAssetManager asset) {
+		if (has_been_set)
+			return;
+		quad = c;
+		JSONObject desc = null;
+		try {
+			desc = new JSONObject(_QR_code);
+		} catch (JSONException e) {
+			desc = null;
+		}
+		if (desc != null) {
+			String pmd, vmd;
+			try {
+				pmd = desc.getString("pmd");
+				vmd = desc.getString("vmd");
+			} catch (JSONException e) {
+				return;
+			}
+			model = asset.get(pmd, vmd);
+			String music_dir = null;
+			music = null;
+			try {
+				music_dir = desc.getString("music");
+				music = Gdx.audio.newMusic(new FileHandle(music_dir));
+			} catch (JSONException e) {
+				music = null;
+			} catch (GdxRuntimeException e) { //music can't be loaded
+				music = null;
+			}
+			if (music != null)
+			{
+				music.setLooping(false);
+				music.setOnCompletionListener(new OnCompletionListener() {
+		
+					@Override
+					public void onCompletion(Music music) {
+						music.stop();
+					}
+					
+				});
+			}
+			has_been_set = true;
+		}
+	}
+
+	public ModelInfo(MatOfPoint2f c, String _QR_code, JOGL _jogl, MMDModel model, Music _music) {
+		set(c, _QR_code, _jogl, model, _music);
+	}
+	
+	public void set(MatOfPoint2f c, String _QR_code, JOGL _jogl, MMDModel model, Music _music) {
 		jogl = _jogl;
 		//loading = true;
 		this.model = model;
@@ -56,15 +97,18 @@ class ModelInfo
 		time = System.currentTimeMillis();
 		
 		music = _music;
-		music.setLooping(false);
-		music.setOnCompletionListener(new OnCompletionListener() {
-
-			@Override
-			public void onCompletion(Music music) {
-				music.stop();
-			}
-			
-		});
+		if (music != null)
+		{
+			music.setLooping(false);
+			music.setOnCompletionListener(new OnCompletionListener() {
+	
+				@Override
+				public void onCompletion(Music music) {
+					music.stop();
+				}
+				
+			});
+		}
 	}
 	
 	public float updateFrameNo(float framerate) {
@@ -76,17 +120,23 @@ class ModelInfo
 	}
 	
 	public void play() {
-		music.play();
+		if (music != null)
+			music.play();
 		time = System.currentTimeMillis();
 	}
 	
 	public void pause() {
-		music.pause();
+		if (music != null)
+			music.pause();
 		//System.out.println("music paused");
 	}
 	
 	public boolean isPlaying() {
 		return music.isPlaying();
+	}
+	
+	public boolean isSet() {
+		return has_been_set;
 	}
 	
 	/*
@@ -115,4 +165,6 @@ class ModelInfo
 	float frameno;
 	long time;
 	Music music;
+	String QR_code;
+	boolean has_been_set = false;
 };

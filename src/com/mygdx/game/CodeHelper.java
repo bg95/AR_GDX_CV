@@ -45,6 +45,12 @@ public class CodeHelper {
     }
 	
 	public static String decodeInQuad(Mat image, MatOfPoint2f quad) {
+		//TODO: FOR TEST
+		if (true)
+		return   "{\"pmd\":\"mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd\", "
+				+ "\"vmd\":\"mmd/VMD/新华里-熊猫团.vmd\","
+				+ "\"music\":\"luotianyi_xinhuali.mp3\"}";
+		
 		Mat unwarp_webcam = new Mat(400, 400, image.type());
 		MatOfPoint2f dst = new MatOfPoint2f(new Point[] {
 				new Point(0, 0),
