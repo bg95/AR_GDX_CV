@@ -25,6 +25,7 @@ public class QuadAndCode {
 	static double quad_match_thres = 1E4;
 	static double quad_match_offset = 2E6 * 4;
 	static double code_match_score = 1E10;
+	static double code_mismatch_score = 1E12;
 
 	static void matchQuadAndCodes(List<QuadAndCode> src, List<QuadAndCode> dst, int[] matching, int[] matching_inv) {
 		double[][] w = new double[src.size()][dst.size()];
@@ -45,7 +46,7 @@ public class QuadAndCode {
 			if (matching[i] != -1)
 			{
 				j = matching[i];
-				if (w[i][j] < quad_match_offset - quad_match_thres)
+				if (w[i][j] < quad_match_offset - quad_match_thres || scoreCode(src.get(i).code, dst.get(j).code) < 0)
 				{
 					matching_inv[j] = -1;
 					matching[i] = -1;
@@ -121,7 +122,7 @@ public class QuadAndCode {
 	static double scoreCode(String a, String b) {
 		if (a.isEmpty() || b.isEmpty())
 			return 0;
-		return a.equals(b) ? code_match_score : 0;
+		return a.equals(b) ? code_match_score : -code_mismatch_score;
 	}
 
 }

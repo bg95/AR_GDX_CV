@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.Matrix4;
 public class MMDModelInstance {
 
 	public MMDModelInstance(MMDModel model, Matrix4 mulLeft, float frameno) {
+		assert(model != null);
 		this.model = model;
 		transform = mulLeft.getValues().clone();
 		this.frameno = frameno;

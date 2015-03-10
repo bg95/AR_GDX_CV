@@ -45,12 +45,32 @@ public class CodeHelper {
     }
 	
 	public static String decodeInQuad(Mat image, MatOfPoint2f quad) {
-		//TODO: FOR TEST
+		if (false)
+			return  
+					"{\"pmd\":\"mmd/Models/OneDrive-2015-03-09/¯¢¨ñ½òBPMD090701_1/½òBIK200906262.pmd\", "
+					+ "\"vmd\":\"mmd/VMD/doara.vmd\","
+					+ "\"music\":\"\"}";
+
+/*		if (true)
+			return  Math.random() > 0.5 ?
+					"{\"pmd\":\"mmd/Models/OneDrive-2015-03-09/éçnJPMD/éçnJ.pmd\", "
+					+ "\"vmd\":\"mmd/VMD/Project DIVA.vmd\","
+					+ "\"music\":\"\"}" :
+					"";
 		if (true)
-		return   "{\"pmd\":\"mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd\", "
-				+ "\"vmd\":\"mmd/VMD/新华里-熊猫团.vmd\","
-				+ "\"music\":\"luotianyi_xinhuali.mp3\"}";
-		
+			return  
+					"{\"pmd\":\"mmd/Models/madoka/md_m/md_m.pmd\", "
+					+ "\"vmd\":\"mmd/VMD/把你mikumiku掉.vmd\","
+					+ "\"music\":\"mmd/music/コネクト-梶浦由記.mp3\"}";
+		if (true)
+			return  Math.random() > 1 ?
+					"{\"pmd\":\"mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd\", "
+					+ "\"vmd\":\"mmd/VMD/新华里-熊猫团.vmd\","
+					+ "\"music\":\"luotianyi_xinhuali.mp3\"}" :
+					"{\"pmd\":\"mmd/Models/neru_akita_ver1.2/neru_akita_ver1.2_masisi.pmd\", "
+					+ "\"vmd\":\"mmd/VMD/doara.vmd\","
+					+ "\"music\":\"not_found.mp3\"}";
+*/
 		Mat unwarp_webcam = new Mat(400, 400, image.type());
 		MatOfPoint2f dst = new MatOfPoint2f(new Point[] {
 				new Point(0, 0),

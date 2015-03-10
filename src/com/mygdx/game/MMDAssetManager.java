@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.badlogic.gdx.Gdx;
+
 import net.yzwlab.javammd.GLTexture;
 import net.yzwlab.javammd.IGLTextureProvider.Handler;
 import net.yzwlab.javammd.ReadException;
@@ -23,13 +25,18 @@ public class MMDAssetManager implements Handler{
 	
 	public void load(String pmd, String vmd) throws ReadException, IOException {
 		MMDModel m = new MMDModel();
-		m.openPMD(new FileBuffer(new File(pmd)));
+		File pmd_file = new File(pmd);
+		m.openPMD(new FileBuffer(pmd_file));
 		m.openVMD(new FileBuffer(new File(vmd)));
+		jogl.setBaseDir(pmd_file.getParentFile());
 		m.prepare(jogl, this);
 		model_map.put(pmd + "\n" + vmd, m);
+		//System.out.println("model_map.put(" + pmd + "\\n" + vmd + ")");
 	}
 	
 	public MMDModel get(String pmd, String vmd) {
+		//System.out.println("model_map.get(" + pmd + "\\n" + vmd + ")");
+		//assert model_map.get(pmd + "\n" + vmd) != null;
 		return model_map.get(pmd + "\n" + vmd);
 	}
 

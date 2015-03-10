@@ -53,6 +53,8 @@ class ModelInfo
 				return;
 			}
 			model = asset.get(pmd, vmd);
+			if (model == null)
+				return;
 			String music_dir = null;
 			music = null;
 			try {

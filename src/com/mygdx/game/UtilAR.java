@@ -362,7 +362,7 @@ public class UtilAR {
 		imData.rewind();
 		Gdx.gl20.glTexImage2D(GL20.GL_TEXTURE_2D, 0, singleChannel?GL20.GL_LUMINANCE:GL20.GL_RGB, w,h, 0, singleChannel?GL20.GL_LUMINANCE:GL20.GL_RGB, signed?GL20.GL_BYTE:GL20.GL_UNSIGNED_BYTE, imData);
 
-		assert Gdx.gl20.glGetError()==0;
+		//assert Gdx.gl20.glGetError()==0;
 	}
 
 	/**

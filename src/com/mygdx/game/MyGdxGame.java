@@ -225,7 +225,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 				{
 					model_info = new ModelInfo(jogl);//new ModelInfo(mmd_model, c, jogl, Gdx.audio.newMusic(new FileHandle(music_file)));
 					model_info.set(c, code, mmd_asset);
-					if (model_info != null)
+					if (model_info.isSet())
 						model_list.add(model_info);
 					if (model_list.size() > MAX_MODELS)
 					{
@@ -247,6 +247,8 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 					model_info = model_list.get(matching[i]);
 					c = adjustPolygonToMatch(c, model_info.quad);
 					model_info.quad = c;
+					if (!qc_list_quads.get(i).code.isEmpty())
+						model_info.QR_code = qc_list_quads.get(i).code;
 					//System.out.print("Old quad " + i + "," + matching[i] + "\n");
 				}
 				i++;
@@ -255,7 +257,7 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 					Matrix4 transform = correctSolvePnP(object_corners, c,
 							intrinsics, distortion, cam.fieldOfView, webcam.rows());
 					Matrix4 ttransl = new Matrix4();
-					if (model_info != null)
+					if (model_info.isSet())
 						instances_list.add(new MMDModelInstance(model_info.model, transform, model_info.updateFrameNo()));
 				}
 				List<MatOfPoint> tmp = new ArrayList<MatOfPoint>();
@@ -452,20 +454,28 @@ public class MyGdxGame implements ApplicationListener, IGLTextureProvider.Handle
 	//File pmd_dir = new File("mmd/Models/Tda Hagane Miku APPEND/Hagane APPEND V2/Tda Hagane Miku.pmx");
 	//File pmd_dir = new File("mmd/Models/Tda2698489/Tda®¹~NEAyh_Ver1.00(nCq[üÏ).pmx");
 	String[] pmd_dir_list = new String[] {
-			"mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd"
+			"mmd/Models/OneDrive-2015-03-09/¯¢¨ñ½òBPMD090701_1/½òBIK200906262.pmd",
+			//"mmd/Models/洛天依ver1.10/¡¾ÂåÌìÒÀLuoTianYi¡¿.pmd",
+			"mmd/Models/neru_akita_ver1.2/neru_akita_ver1.2_masisi.pmd",
+			"mmd/Models/madoka/md_m/md_m.pmd",
+			"mmd/Models/OneDrive-2015-03-09/éçnJPMD/éçnJ.pmd",
 	};
 	//File pmd_dir = new File("mmd/Models/saberlily/saberlily1.pmd");
 	//File vmd_dir = new File("mmd/VMD/aoitori.vmd");
 	//File vmd_dir = new File("mmd/VMD/恋愛サーキュレーション/楒垽僒乕僉儏儗乕僔儑儞-偪傃.vmd");
 	String[] vmd_dir_list = new String[] {
-			"mmd/VMD/新华里-熊猫团.vmd"
+			"mmd/VMD/doara.vmd",
+			//"mmd/VMD/新华里-熊猫团.vmd",
+			"mmd/VMD/doara.vmd",
+			"mmd/VMD/把你mikumiku掉.vmd",
+			"mmd/VMD/Project DIVA.vmd",
 	};
 	//File pmd_filename = new File(pmd_dir.getName());
 	//File vmd_filename = new File(vmd_dir.getName());
-	String jogl_base_dir = "mmd/Models/洛天依ver1.10";
+	//String jogl_base_dir = "mmd/Models/洛天依ver1.10";
 	void initModel() {
 		//new TestDrawer(Gdx.gl30, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());		
-		jogl = new JOGL(new File(jogl_base_dir), Gdx.gl);
+		jogl = new JOGL(Gdx.gl);//new JOGL(new File(jogl_base_dir), Gdx.gl);
 		mmd_asset = new MMDAssetManager(jogl);
 		for (int i = 0; i < pmd_dir_list.length; i++)
 		{

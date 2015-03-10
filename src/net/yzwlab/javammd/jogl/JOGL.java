@@ -60,6 +60,7 @@ public class JOGL implements IGL, IGLTextureProvider {
 			"uniform mat4 mvp_matrix; // model-view-projection matrix\n"
 		+	"uniform mat3 normal_matrix; // normal matrix\n"
 		+	"uniform vec3 ec_light_dir; // light direction in eye coords\n"
+		+	"uniform vec3 light_color; // light color\n"
 		+	"uniform vec4 m_diffuse;\n"
 		+	"uniform vec4 m_ambiant;\n"
 		+	"uniform vec4 m_specular;\n"
@@ -84,7 +85,7 @@ public class JOGL implements IGL, IGLTextureProvider {
 		+	"	//v_specular = max(v_specular, 0f);\n"
 		+	"	float v_specular = 1.0;\n"
 		+	"	for (int i = 0; i < int(m_shininess); i++) v_specular *= max(ec_reflected[2], 0.0);\n"
-		+	"	v_material = vec4(vec3(v_diffuse + v_specular), 0.5) + "
+		+	"	v_material = vec4(light_color, 1.0) * vec4(vec3(v_diffuse + v_specular), 0.5) + "
 		+ 	"			vec4(m_ambiant[3] * vec3(m_ambiant[0], m_ambiant[1], m_ambiant[2]), 0.5); //emitted\n"
 		+	"	v_material_emission = m_emission; //emitted\n"
 		+	"	v_texcoord = a_texcoord;\n"
@@ -102,6 +103,7 @@ public class JOGL implements IGL, IGLTextureProvider {
 		+	"varying vec2 v_texcoord;\n"
 		+	"void main (void) {\n"
 		+	"	vec4 color = texture2D(t_reflectance, v_texcoord);\n"
+		+	"	//vec4 new_v_material = vec4(0.5 * vec3(v_material[0], v_material[1], v_material[2]), v_material[3]);\n"
 		+	"	vec4 tmp_color = color * v_material + v_material_emission;\n"
 		+	"	for (int i = 0; i < 4; i++) if (tmp_color[i] > 1.0f) tmp_color[i] = 1.0f;\n"
 		+	"	gl_FragColor = tmp_color;\n"
@@ -124,12 +126,12 @@ public class JOGL implements IGL, IGLTextureProvider {
 	final int VTX_OFFSET = 0, NRM_OFFSET = 3, TEX_OFFSET = 6;
 
 	
-	public JOGL(File baseDir, GL20 gl) {
-		if (baseDir == null || gl == null) {
+	public JOGL(/*File baseDir, */GL20 gl) {
+		if (/*baseDir == null || */gl == null) {
 			throw new IllegalArgumentException();
 		}
 		this.imageService = new AWTImageService();
-		this.baseDir = baseDir;
+		this.baseDir = null;//baseDir;
 		this.gl = gl;
 		initShaders();
 		onSurfaceCreated();
@@ -314,6 +316,9 @@ public class JOGL implements IGL, IGLTextureProvider {
 		if (mEcLightDirHandle != -1)
 			gl.glUniform3f(mEcLightDirHandle, 0f, 1f, -1f);
 			//gl.glUniform3f(mEcLightDirHandle, 0f, 0f, -1f);
+		int t = gl.glGetUniformLocation(programHandle, "light_color");
+		if (t != -1)
+			gl.glUniform3f(t, 0.5f, 0.5f, 0.5f);
 
 		float[] normal_matrix = new float[9];
 		for (int i = 0; i < 3; i++)
@@ -681,6 +686,9 @@ public class JOGL implements IGL, IGLTextureProvider {
 
 	public File getBaseDir() {
 		return baseDir;
+	}
+	public void setBaseDir(File b) {
+		baseDir = b;
 	}
 
 }
